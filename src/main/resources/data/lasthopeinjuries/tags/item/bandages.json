@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    {"id": "legendarysurvivaloverhaul:bandage", "required": false},
+    {"id": "legendarysurvivaloverhaul:plaster", "required": false}
+  ]
+}

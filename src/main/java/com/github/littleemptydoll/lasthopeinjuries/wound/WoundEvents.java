@@ -82,7 +82,7 @@ public final class WoundEvents {
         WoundState before = WoundService.get(player);
         if (before.wounds().isEmpty() && before.bloodLoss() <= 0) return;
         WoundState after = before.advance();
-        player.setData(WoundStorage.WOUNDS, after);
+        WoundService.set(player, after);
         // Infrequent secondary damage with its own death message and recursion guard.
         if (after.bloodLoss() >= 25 && player.tickCount % 100 == 0) {
             player.hurt(player.damageSources().source(BLEEDING), after.bloodLoss() >= 75 ? 2 : 1);

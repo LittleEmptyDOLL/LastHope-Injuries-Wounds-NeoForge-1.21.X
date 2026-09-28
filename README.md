@@ -9,8 +9,11 @@ NeoForge 1.21.1 mod, currently an early server-side implementation of persistent
 - Wounds are rolled after actual player health damage, including armor and absorption. Equipped armor in the corresponding slot reduces wound probability according to wound type. This is separate from LSO's limb damage resistance.
 - Persistent wounds accumulate blood loss; bandaging reduces bleeding and cleaning reduces contamination. Dirty wounds can develop local infection. Wounds heal over time when infection is low. Blood loss causes periodic health damage and recovers after bleeding stops.
 - Server API: `WoundService.add`, `bandage`, `clean` and `get`. State is serialized as a NeoForge entity data attachment and is cleared on death.
+- Press H (remappable) to open the wound screen. The server sends the current state on opening and whenever it changes. Select a wound to treat it with an item held in either hand; the server validates the wound and item before consuming one item.
 
-These mechanics are provisional balance values. They affect players on the server; there is no client screen, medical item integration, or Moodles UI yet.
+These mechanics are provisional balance values. The screen displays this mod's wounds only; LSO limb health and Moodles are not yet displayed.
+
+Treatment items are configured through the item tags `lasthopeinjuries:bandages` and `lasthopeinjuries:antiseptics`. The bandage tag optionally includes LSO's `bandage` and `plaster` IDs. The antiseptic tag starts empty and can be populated by a datapack. Treatment through this screen affects the wound; it does not yet trigger LSO limb healing.
 
 ## Development commands
 
