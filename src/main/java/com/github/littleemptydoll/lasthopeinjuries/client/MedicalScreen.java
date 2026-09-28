@@ -1,6 +1,7 @@
 package com.github.littleemptydoll.lasthopeinjuries.client;
 
 import com.github.littleemptydoll.lasthopeinjuries.network.WoundNetwork;
+import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoWoundBridge;
 import com.github.littleemptydoll.lasthopeinjuries.wound.TreatmentItems;
 import com.github.littleemptydoll.lasthopeinjuries.wound.Wound;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundState;
@@ -14,6 +15,7 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.fml.ModList;
 
 /** Initial medical view: one selected wound and a server-validated action using a held item. */
 public final class MedicalScreen extends Screen {
@@ -108,7 +110,7 @@ public final class MedicalScreen extends Screen {
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
-        renderBackground(gui, mouseX, mouseY, partialTick);
+        // renderBackground applies Minecraft's menu blur to the entire world.
         int left = (width - 320) / 2;
         int top = (height - 202) / 2;
         gui.fill(left, top, left + 320, top + 202, 0xDD151B22);
@@ -142,6 +144,12 @@ public final class MedicalScreen extends Screen {
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.bandaged",
                     wound.bandaged() ? Component.translatable("gui.yes") : Component.translatable("gui.no")),
                     left + 174, top + 106, 0xDADADA);
+            if (ModList.get().isLoaded("legendarysurvivaloverhaul") && minecraft != null
+                    && minecraft.player != null) {
+                int health = Math.round(100 * LsoWoundBridge.healthRatio(minecraft.player, wound.part()));
+                gui.drawString(font, Component.translatable("screen.lasthopeinjuries.lso_health", health),
+                        left + 174, top + 122, 0xDADADA);
+            }
         }
         gui.drawString(font, Component.translatable("screen.lasthopeinjuries.hold_item"),
                 left + 9, top + 184, 0xAAB2BD);

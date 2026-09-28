@@ -4,6 +4,7 @@ import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import java.util.UUID;
 import com.github.littleemptydoll.lasthopeinjuries.LastHopeInjuries;
+import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoWoundBridge;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -18,6 +19,7 @@ import net.minecraft.world.entity.monster.Zombie;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.item.ArmorItem;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.living.LivingDamageEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
@@ -30,14 +32,18 @@ public final class WoundEvents {
 
     @SubscribeEvent
     public static void onDamage(LivingDamageEvent.Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer player) || event.getNewDamage() < 1.0f) return;
+        if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        // Always release the snapshot, including for hits that cannot create wounds.
+        BodyPart lsoPart = ModList.get().isLoaded("legendarysurvivaloverhaul")
+                ? LsoWoundBridge.takeDamagedPart(player) : null;
+        if (event.getNewDamage() < 1.0f) return;
         DamageSource source = event.getSource();
         // These damage types are physiological/environmental, and bleeding must not create another wound.
         if (source.is(BLEEDING) || source.is(DamageTypes.STARVE) || source.is(DamageTypes.DROWN)
                 || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || source.is(DamageTypes.MAGIC)) return;
 
         WoundType type = selectType(player, source, event.getNewDamage());
-        BodyPart part = selectPart(player, source);
+        BodyPart part = lsoPart != null ? lsoPart : selectPart(player, source);
         EquipmentSlot slot = part.armorSlot();
         boolean covered = player.getItemBySlot(slot).getItem() instanceof ArmorItem;
         double resistance = covered ? protection(type) : 0.0;

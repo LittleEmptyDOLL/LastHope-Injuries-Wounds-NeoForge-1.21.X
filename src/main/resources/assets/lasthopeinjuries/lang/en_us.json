@@ -11,6 +11,7 @@
   "screen.lasthopeinjuries.infection": "Infection: %s/100",
   "screen.lasthopeinjuries.contamination": "Dirt: %s/100",
   "screen.lasthopeinjuries.bandaged": "Bandaged: %s",
+  "screen.lasthopeinjuries.lso_health": "LSO: %s%%",
   "screen.lasthopeinjuries.hold_item": "Hold a treatment item in either hand",
   "part.lasthopeinjuries.head": "Head",
   "part.lasthopeinjuries.chest": "Chest",

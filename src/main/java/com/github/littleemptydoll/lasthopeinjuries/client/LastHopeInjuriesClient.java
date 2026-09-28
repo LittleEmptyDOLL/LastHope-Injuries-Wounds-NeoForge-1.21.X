@@ -9,6 +9,7 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
@@ -20,7 +21,9 @@ import org.lwjgl.glfw.GLFW;
 public final class LastHopeInjuriesClient {
     private static final KeyMapping OPEN_MEDICAL = new KeyMapping(
             "key.lasthopeinjuries.open_medical", KeyConflictContext.IN_GAME,
-            InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_H, "key.categories.lasthopeinjuries");
+            InputConstants.Type.KEYSYM,
+            ModList.get().isLoaded("legendarysurvivaloverhaul") ? GLFW.GLFW_KEY_J : GLFW.GLFW_KEY_H,
+            "key.categories.lasthopeinjuries");
 
     public LastHopeInjuriesClient(IEventBus modBus) {
         modBus.addListener(this::registerKeys);

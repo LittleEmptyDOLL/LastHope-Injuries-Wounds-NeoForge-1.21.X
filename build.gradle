@@ -27,7 +27,17 @@ sourceSets.main.resources {
 }
 
 repositories {
-    // Add here additional repositories if required by some of the dependencies below.
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = "Modrinth"
+                url = "https://api.modrinth.com/maven"
+            }
+        }
+        filter {
+            includeGroup "maven.modrinth"
+        }
+    }
 }
 
 base {
@@ -116,6 +126,9 @@ configurations {
 }
 
 dependencies {
+    // Same NeoForge 1.21.1 artifact used by exoequipment; absent from the published mod's runtime dependencies.
+    compileOnly "maven.modrinth:TQr3t8Sb:AZzEduN3"
+    localRuntime "maven.modrinth:TQr3t8Sb:AZzEduN3"
     // Example optional mod dependency with JEI
     // The JEI API is declared for compile time use, while the full JEI artifact is used at runtime
     // compileOnly "mezz.jei:jei-${mc_version}-common-api:${jei_version}"

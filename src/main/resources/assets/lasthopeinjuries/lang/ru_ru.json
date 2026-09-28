@@ -11,6 +11,7 @@
   "screen.lasthopeinjuries.infection": "Инфекция: %s/100",
   "screen.lasthopeinjuries.contamination": "Загрязнение: %s/100",
   "screen.lasthopeinjuries.bandaged": "Перевязано: %s",
+  "screen.lasthopeinjuries.lso_health": "LSO: %s%%",
   "screen.lasthopeinjuries.hold_item": "Держите лечебный предмет в руке",
   "part.lasthopeinjuries.head": "Голова",
   "part.lasthopeinjuries.chest": "Грудь",
