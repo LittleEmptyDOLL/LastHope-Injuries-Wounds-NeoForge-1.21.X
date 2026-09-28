@@ -23,3 +23,6 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew build
+
+      - name: Dedicated server smoke test
+        run: ./gradlew runGameTestServer
