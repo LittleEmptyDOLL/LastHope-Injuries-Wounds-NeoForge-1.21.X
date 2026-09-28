@@ -26,7 +26,7 @@ public final class WoundService {
         if (state.wounds().size() >= MAX_WOUNDS) return false;
         List<Wound> wounds = new ArrayList<>(state.wounds());
         wounds.add(wound);
-        set(player, new WoundState(wounds, state.bloodLoss()));
+        set(player, new WoundState(wounds, state.bloodLevel()));
         return true;
     }
 
@@ -62,7 +62,7 @@ public final class WoundService {
         for (int index = 0; index < wounds.size(); index++) {
             if (wounds.get(index).id().equals(id) && canChange.test(wounds.get(index))) {
                 wounds.set(index, operation.apply(wounds.get(index)));
-                set(player, new WoundState(wounds, state.bloodLoss()));
+                set(player, new WoundState(wounds, state.bloodLevel()));
                 return true;
             }
         }

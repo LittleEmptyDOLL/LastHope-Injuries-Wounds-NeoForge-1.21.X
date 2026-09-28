@@ -7,8 +7,8 @@ public enum WoundType {
     SCRATCH(2, 8, 240),
     LACERATION(5, 16, 420),
     DEEP_LACERATION(10, 25, 720),
-    PUNCTURE(6, 22, 600),
-    BURN(1, 12, 600),
+    PUNCTURE(4, 22, 600),
+    BURN(0, 12, 600),
     BITE(4, 35, 600);
 
     public static final Codec<WoundType> CODEC = Codec.STRING.xmap(WoundType::valueOf, WoundType::name);

@@ -86,13 +86,21 @@ public final class WoundEvents {
     public static void onTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.tickCount % 20 != 0) return;
         WoundState before = WoundService.get(player);
-        if (before.wounds().isEmpty() && before.bloodLoss() <= 0) return;
+        if (before.wounds().isEmpty() && before.bloodLevel() >= 100) return;
         WoundState after = before.advance();
         WoundService.set(player, after);
-        // Infrequent secondary damage with its own death message and recursion guard.
-        if (after.bloodLoss() >= 25 && player.tickCount % 100 == 0) {
-            player.hurt(player.damageSources().source(BLEEDING), after.bloodLoss() >= 75 ? 2 : 1);
+        // Severe depletion is harmful even after the bleeding has stopped.
+        if (after.bloodLevel() <= 15 && player.tickCount % 100 == 0) {
+            player.hurt(player.damageSources().source(BLEEDING), after.bloodLevel() <= 5 ? 2 : 1);
         }
+    }
+
+    @SubscribeEvent
+    public static void onOutgoingDamage(LivingDamageEvent.Pre event) {
+        if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)) return;
+        float level = WoundService.get(attacker).bloodLevel();
+        if (level < 30) event.setNewDamage(event.getNewDamage() * 0.6F);
+        else if (level < 60) event.setNewDamage(event.getNewDamage() * 0.8F);
     }
 
     @SubscribeEvent
@@ -103,7 +111,9 @@ public final class WoundEvents {
                     ServerPlayer player = context.getSource().getPlayerOrException();
                     WoundState state = WoundService.get(player);
                     context.getSource().sendSuccess(() -> Component.literal(
-                            "Blood loss: " + Math.round(state.bloodLoss()) + "/100; wounds: " + state.wounds().size()), false);
+                            "Blood level: " + Math.round(state.bloodLevel()) + "/100; bleeding: "
+                                    + String.format(java.util.Locale.ROOT, "%.2f", state.bleedingRate())
+                                    + "/s; wounds: " + state.wounds().size()), false);
                     for (Wound wound : state.wounds()) {
                         context.getSource().sendSuccess(() -> Component.literal(
                                 wound.id() + " " + wound.part() + " " + wound.type()

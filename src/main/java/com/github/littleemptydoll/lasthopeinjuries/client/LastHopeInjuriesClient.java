@@ -27,6 +27,7 @@ public final class LastHopeInjuriesClient {
 
     public LastHopeInjuriesClient(IEventBus modBus) {
         modBus.addListener(this::registerKeys);
+        modBus.addListener(BloodHud::register);
         NeoForge.EVENT_BUS.register(this);
     }
 
@@ -40,6 +41,10 @@ public final class LastHopeInjuriesClient {
 
     @SubscribeEvent
     public void tick(ClientTickEvent.Post event) {
+        if (Minecraft.getInstance().player == null) {
+            ClientWounds.reset();
+            return;
+        }
         while (OPEN_MEDICAL.consumeClick()) {
             if (Minecraft.getInstance().player != null) {
                 PacketDistributor.sendToServer(new WoundNetwork.Request());

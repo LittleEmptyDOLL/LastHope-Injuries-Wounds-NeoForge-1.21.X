@@ -10,6 +10,8 @@ public final class ClientWounds {
 
     public static WoundState state() { return state; }
 
+    public static void reset() { state = WoundState.empty(); }
+
     public static void receive(WoundState next, boolean open) {
         state = next;
         if (open && Minecraft.getInstance().player != null) {

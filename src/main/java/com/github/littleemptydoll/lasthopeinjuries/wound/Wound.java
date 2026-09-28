@@ -45,7 +45,7 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
     }
 
     public double bleedingPerSecond() {
-        return type.bleed() * severity * (bandaged ? 0.15 : 1.0) / 100.0;
+        return bandaged ? 0 : type.bleed() * severity / 100.0;
     }
 
     public boolean healed() {

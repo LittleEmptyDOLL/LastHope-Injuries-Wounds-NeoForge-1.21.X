@@ -116,8 +116,10 @@ public final class MedicalScreen extends Screen {
         gui.fill(left + 163, top + 27, left + 164, top + 177, 0xFF58606A);
         gui.drawString(font, title, left + 9, top + 8, 0xFFFFFF);
         WoundState state = ClientWounds.state();
-        gui.drawString(font, Component.translatable("screen.lasthopeinjuries.blood_loss",
-                Math.round(state.bloodLoss())), left + 190, top + 8, 0xEAA0A0);
+        gui.drawString(font, Component.translatable("screen.lasthopeinjuries.blood_level",
+                Math.round(state.bloodLevel())), left + 190, top + 8, 0xEAA0A0);
+        gui.drawString(font, Component.translatable("screen.lasthopeinjuries.bleeding_rate",
+                rate(state.bleedingRate())), left + 174, top + 23, 0xEAA0A0);
 
         int start = page * ROWS;
         for (int row = 0; row < ROWS && start + row < state.wounds().size(); row++) {
@@ -149,6 +151,8 @@ public final class MedicalScreen extends Screen {
                 gui.drawString(font, Component.translatable("screen.lasthopeinjuries.lso_health", health),
                         left + 174, top + 122, 0xDADADA);
             }
+            gui.drawString(font, Component.translatable("screen.lasthopeinjuries.wound_bleeding",
+                    rate(wound.bleedingPerSecond())), left + 174, top + 138, 0xEAA0A0);
         }
         gui.drawString(font, Component.translatable("screen.lasthopeinjuries.hold_item"),
                 left + 9, top + 184, 0xAAB2BD);
@@ -168,6 +172,15 @@ public final class MedicalScreen extends Screen {
             return true;
         }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public boolean isPauseScreen() {
+        return false;
+    }
+
+    private static String rate(double value) {
+        return String.format(Locale.ROOT, "%.2f", value);
     }
 
     private static Component label(String kind, String name) {
