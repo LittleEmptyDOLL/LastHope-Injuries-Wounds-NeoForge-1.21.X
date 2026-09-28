@@ -34,7 +34,7 @@ public final class WoundEvents {
         DamageSource source = event.getSource();
         // These damage types are physiological/environmental, and bleeding must not create another wound.
         if (source.is(BLEEDING) || source.is(DamageTypes.STARVE) || source.is(DamageTypes.DROWN)
-                || source.is(DamageTypes.OUT_OF_WORLD) || source.is(DamageTypes.MAGIC)) return;
+                || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || source.is(DamageTypes.MAGIC)) return;
 
         WoundType type = selectType(player, source, event.getNewDamage());
         BodyPart part = selectPart(player, source);
