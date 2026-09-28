@@ -110,7 +110,6 @@ public final class MedicalScreen extends Screen {
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
-        // renderBackground applies Minecraft's menu blur to the entire world.
         int left = (width - 320) / 2;
         int top = (height - 202) / 2;
         gui.fill(left, top, left + 320, top + 202, 0xDD151B22);
@@ -154,6 +153,21 @@ public final class MedicalScreen extends Screen {
         gui.drawString(font, Component.translatable("screen.lasthopeinjuries.hold_item"),
                 left + 9, top + 184, 0xAAB2BD);
         super.render(gui, mouseX, mouseY, partialTick);
+    }
+
+    @Override
+    public void renderBackground(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
+        // Screen.render invokes this after our panel and text, before its widgets.
+        // The vanilla implementation would blur what we have already drawn.
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (LastHopeInjuriesClient.isMedicalKey(keyCode, scanCode)) {
+            onClose();
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
     private static Component label(String kind, String name) {

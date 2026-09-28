@@ -34,6 +34,10 @@ public final class LastHopeInjuriesClient {
         event.register(OPEN_MEDICAL);
     }
 
+    static boolean isMedicalKey(int keyCode, int scanCode) {
+        return OPEN_MEDICAL.matches(keyCode, scanCode);
+    }
+
     @SubscribeEvent
     public void tick(ClientTickEvent.Post event) {
         while (OPEN_MEDICAL.consumeClick()) {
