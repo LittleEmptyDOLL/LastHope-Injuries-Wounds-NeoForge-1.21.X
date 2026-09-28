@@ -1,25 +1,25 @@
+# Last Hope: Injuries and Wounds
 
-Installation information
-=======
+NeoForge 1.21.1 mod, currently an early server-side implementation of persistent physical wounds.
 
-This template repository can be directly cloned to get you started with a new
-mod. Simply create a new repository cloned from this one, by following the
-instructions provided by [GitHub](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template).
+## Implemented
 
-Once you have your clone, simply open the repository in the IDE of your choice. The usual recommendation for an IDE is either IntelliJ IDEA or Eclipse.
+- Eight body regions: head, chest, left/right arms, left/right legs and left/right feet. These correspond to LSO's `BodyPartEnum` names.
+- Bruises, scratches, lacerations, deep lacerations, punctures, burns and bites. A bite here is a physical wound; zombie infection remains with The Hordes.
+- Wounds are rolled after actual player health damage, including armor and absorption. Equipped armor in the corresponding slot reduces wound probability according to wound type. This is separate from LSO's limb damage resistance.
+- Persistent wounds accumulate blood loss; bandaging reduces bleeding and cleaning reduces contamination. Dirty wounds can develop local infection. Wounds heal over time when infection is low. Blood loss causes periodic health damage and recovers after bleeding stops.
+- Server API: `WoundService.add`, `bandage`, `clean` and `get`. State is serialized as a NeoForge entity data attachment and is cleared on death.
 
-If at any point you are missing libraries in your IDE, or you've run into problems you can
-run `gradlew --refresh-dependencies` to refresh the local cache. `gradlew clean` to reset everything 
-{this does not affect your code} and then start the process again.
+These mechanics are provisional balance values. They affect players on the server; there is no client screen, medical item integration, or Moodles UI yet.
 
-Mapping Names:
-============
-By default, the MDK is configured to use the official mapping names from Mojang for methods and fields 
-in the Minecraft codebase. These names are covered by a specific license. All modders should be aware of this
-license. For the latest license text, refer to the mapping file itself, or the reference copy here:
-https://github.com/NeoForged/NeoForm/blob/main/Mojang.md
+## Development commands
 
-Additional Resources: 
-==========
-Community Documentation: https://docs.neoforged.net/  
-NeoForged Discord: https://discord.neoforged.net/
+Operators can run `/wounds list`, `/wounds add <part> <type> <severity>`, `/wounds bandage <uuid>` and `/wounds clean <uuid>`. The commands are for testing the mechanics until the treatment interface is implemented. Parts and wound types use the uppercase enum names in the code; input is case insensitive.
+
+## LSO compatibility
+
+The `1.21.1` branch of [LegendarySurvivalOverhaul](https://github.com/sfiomn/LegendarySurvivalOverhaul/tree/1.21.1) currently declares Minecraft 1.20.1 and Forge 47.4.0 in `gradle.properties`. This repository therefore does not compile against that branch. Once a compatible NeoForge 1.21.1 build is available, the planned integration will connect LSO medical items and body health to a combined medical screen, while keeping this wound data and Moodles independent.
+
+## Build
+
+Use JDK 21 and `./gradlew build`. The GitHub Actions workflow also runs this build on pushes.
