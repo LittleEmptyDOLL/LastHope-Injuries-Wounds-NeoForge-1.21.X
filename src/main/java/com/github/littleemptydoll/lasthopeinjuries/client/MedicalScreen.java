@@ -2,6 +2,7 @@ package com.github.littleemptydoll.lasthopeinjuries.client;
 
 import com.github.littleemptydoll.lasthopeinjuries.network.WoundNetwork;
 import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoWoundBridge;
+import com.github.littleemptydoll.lasthopeinjuries.wound.Dressing;
 import com.github.littleemptydoll.lasthopeinjuries.wound.TreatmentItems;
 import com.github.littleemptydoll.lasthopeinjuries.wound.Wound;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundState;
@@ -11,19 +12,24 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.fml.ModList;
 
 /** Initial medical view: one selected wound and a server-validated action using a held item. */
 public final class MedicalScreen extends Screen {
     private static final int ROWS = 5;
+    private static final int PANEL_HEIGHT = 242;
     private UUID selectedId;
     private int page;
     private Button bandageButton;
     private Button cleanButton;
+    private Button removeButton;
     private Button previousButton;
     private Button nextButton;
 
@@ -35,17 +41,20 @@ public final class MedicalScreen extends Screen {
     protected void init() {
         super.init();
         int left = (width - 320) / 2;
-        int top = (height - 202) / 2;
+        int top = (height - PANEL_HEIGHT) / 2;
         previousButton = addRenderableWidget(Button.builder(Component.literal("<"),
                 b -> page = Math.max(0, page - 1)).bounds(left + 8, top + 151, 20, 20).build());
         nextButton = addRenderableWidget(Button.builder(Component.literal(">"),
                 b -> page++).bounds(left + 135, top + 151, 20, 20).build());
         bandageButton = addRenderableWidget(Button.builder(
                 Component.translatable("screen.lasthopeinjuries.bandage"),
-                b -> treat(true)).bounds(left + 169, top + 150, 68, 20).build());
+                b -> treat(true)).bounds(left + 169, top + 160, 68, 20).build());
         cleanButton = addRenderableWidget(Button.builder(
                 Component.translatable("screen.lasthopeinjuries.clean"),
-                b -> treat(false)).bounds(left + 240, top + 150, 68, 20).build());
+                b -> treat(false)).bounds(left + 240, top + 160, 68, 20).build());
+        removeButton = addRenderableWidget(Button.builder(
+                Component.translatable("screen.lasthopeinjuries.remove_dressing"),
+                b -> removeDressing()).bounds(left + 8, top + 190, 86, 20).build());
     }
 
     private Wound selected() {
@@ -77,6 +86,13 @@ public final class MedicalScreen extends Screen {
         }
     }
 
+    private void removeDressing() {
+        Wound wound = selected();
+        if (wound != null && wound.bandaged()) {
+            PacketDistributor.sendToServer(new WoundNetwork.Treat(wound.id().toString(), 2, 0));
+        }
+    }
+
     @Override
     public void tick() {
         super.tick();
@@ -85,17 +101,21 @@ public final class MedicalScreen extends Screen {
         page = Math.min(page, Math.max(0, (count - 1) / ROWS));
         previousButton.active = page > 0;
         nextButton.active = (page + 1) * ROWS < count;
-        bandageButton.active = wound != null && !wound.bandaged()
+        bandageButton.setMessage(Component.translatable(wound != null && wound.bandaged()
+                ? "screen.lasthopeinjuries.replace_dressing" : "screen.lasthopeinjuries.bandage"));
+        bandageButton.active = wound != null
+                && (wound.dressing() == null || !wound.dressing().freshEnough())
                 && handFor(TreatmentItems.BANDAGES) != null;
         cleanButton.active = wound != null && (wound.contamination() > 0 || wound.infection() > 0)
                 && handFor(TreatmentItems.ANTISEPTICS) != null;
+        removeButton.active = wound != null && wound.bandaged();
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (super.mouseClicked(mouseX, mouseY, button)) return true;
         int left = (width - 320) / 2;
-        int top = (height - 202) / 2;
+        int top = (height - PANEL_HEIGHT) / 2;
         if (button == 0 && mouseX >= left + 8 && mouseX < left + 157
                 && mouseY >= top + 35 && mouseY < top + 35 + ROWS * 22) {
             int index = page * ROWS + ((int) mouseY - top - 35) / 22;
@@ -111,9 +131,9 @@ public final class MedicalScreen extends Screen {
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
         int left = (width - 320) / 2;
-        int top = (height - 202) / 2;
-        gui.fill(left, top, left + 320, top + 202, 0xDD151B22);
-        gui.fill(left + 163, top + 27, left + 164, top + 177, 0xFF58606A);
+        int top = (height - PANEL_HEIGHT) / 2;
+        gui.fill(left, top, left + 320, top + PANEL_HEIGHT, 0xDD151B22);
+        gui.fill(left + 163, top + 27, left + 164, top + 181, 0xFF58606A);
         gui.drawString(font, title, left + 9, top + 8, 0xFFFFFF);
         WoundState state = ClientWounds.state();
         gui.drawString(font, Component.translatable("screen.lasthopeinjuries.blood_level",
@@ -142,8 +162,10 @@ public final class MedicalScreen extends Screen {
                     left + 174, top + 74, 0xDADADA);
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.contamination",
                     wound.contamination()), left + 174, top + 90, 0xDADADA);
-            gui.drawString(font, Component.translatable("screen.lasthopeinjuries.bandaged",
-                    wound.bandaged() ? Component.translatable("gui.yes") : Component.translatable("gui.no")),
+            Dressing dressing = wound.dressing();
+            Component itemName = dressing == null ? Component.translatable("screen.lasthopeinjuries.no_dressing")
+                    : dressingName(dressing.item());
+            gui.drawString(font, Component.translatable("screen.lasthopeinjuries.dressing", itemName),
                     left + 174, top + 106, 0xDADADA);
             if (ModList.get().isLoaded("legendarysurvivaloverhaul") && minecraft != null
                     && minecraft.player != null) {
@@ -153,9 +175,15 @@ public final class MedicalScreen extends Screen {
             }
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.wound_bleeding",
                     rate(wound.bleedingPerSecond())), left + 174, top + 138, 0xEAA0A0);
+            if (dressing != null) {
+                gui.drawString(font, Component.translatable("screen.lasthopeinjuries.cleanliness",
+                        Math.round(dressing.cleanliness())), left + 174, top + 190, 0xDADADA);
+                gui.drawString(font, Component.translatable("screen.lasthopeinjuries.saturation",
+                        Math.round(dressing.saturation())), left + 174, top + 204, 0xDADADA);
+            }
         }
         gui.drawString(font, Component.translatable("screen.lasthopeinjuries.hold_item"),
-                left + 9, top + 184, 0xAAB2BD);
+                left + 9, top + 225, 0xAAB2BD);
         super.render(gui, mouseX, mouseY, partialTick);
     }
 
@@ -181,6 +209,13 @@ public final class MedicalScreen extends Screen {
 
     private static String rate(double value) {
         return String.format(Locale.ROOT, "%.2f", value);
+    }
+
+    private static Component dressingName(String itemId) {
+        ResourceLocation id = ResourceLocation.tryParse(itemId);
+        if (id == null) return Component.literal(itemId);
+        Item item = BuiltInRegistries.ITEM.get(id);
+        return item == Items.AIR ? Component.literal(id.getPath()) : item.getDescription();
     }
 
     private static Component label(String kind, String name) {

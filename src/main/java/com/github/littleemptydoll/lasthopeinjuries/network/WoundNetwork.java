@@ -20,7 +20,7 @@ public final class WoundNetwork {
     private WoundNetwork() {}
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("2");
+        var registrar = event.registrar("3");
         registrar.playToClient(Sync.TYPE, Sync.STREAM_CODEC,
                 (payload, context) -> ClientWounds.receive(payload.state(), payload.open()));
         registrar.playToServer(Request.TYPE, Request.STREAM_CODEC, (payload, context) -> {
@@ -32,10 +32,14 @@ public final class WoundNetwork {
             if (!(context.player() instanceof ServerPlayer player)) return;
             try {
                 UUID id = UUID.fromString(payload.id());
-                if (payload.action() < 0 || payload.action() > 1
+                if (payload.action() < 0 || payload.action() > 2
                         || payload.hand() < 0 || payload.hand() > 1) return;
-                WoundService.treat(player, id, payload.action() == 0,
-                        payload.hand() == 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
+                if (payload.action() == 2) {
+                    WoundService.removeDressing(player, id);
+                } else {
+                    WoundService.treat(player, id, payload.action() == 0,
+                            payload.hand() == 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
+                }
             } catch (IllegalArgumentException ignored) {
                 // Invalid or obsolete client selection. Never trust packet-supplied wound IDs.
             }

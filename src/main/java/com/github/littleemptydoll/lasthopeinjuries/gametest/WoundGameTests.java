@@ -40,4 +40,33 @@ public final class WoundGameTests {
             helper.succeed();
         }
     }
+
+    @GameTest(template = "empty")
+    public static void dressingSaturatesAndLegacyWoundsLoad(GameTestHelper helper) {
+        Wound deep = Wound.create(BodyPart.CHEST, WoundType.DEEP_LACERATION, 4);
+        double openBleeding = deep.bleedingPerSecond();
+        Wound bandaged = deep.bandage("legendarysurvivaloverhaul:bandage");
+        double freshBleeding = bandaged.bleedingPerSecond();
+        Wound soaked = bandaged;
+        for (int second = 0; second < 100; second++) soaked = soaked.advance();
+        Wound replaced = soaked.bandage("legendarysurvivaloverhaul:bandage");
+
+        JsonObject oldWound = Wound.CODEC.encodeStart(JsonOps.INSTANCE, deep).getOrThrow().getAsJsonObject();
+        oldWound.addProperty("bandaged", true);
+        Wound migrated = Wound.CODEC.parse(JsonOps.INSTANCE, oldWound).getOrThrow();
+        Wound roundTrip = Wound.CODEC.parse(JsonOps.INSTANCE,
+                Wound.CODEC.encodeStart(JsonOps.INSTANCE, soaked).getOrThrow()).getOrThrow();
+
+        if (Math.abs(freshBleeding - openBleeding * 0.2) > 0.0001
+                || soaked.dressing() == null || soaked.dressing().saturation() <= 0
+                || soaked.dressing().cleanliness() >= 100 || soaked.bleedingPerSecond() <= freshBleeding
+                || replaced.bleedingPerSecond() >= soaked.bleedingPerSecond()
+                || replaced.removeDressing().bleedingPerSecond() != openBleeding
+                || !soaked.equals(roundTrip) || !migrated.bandaged()
+                || migrated.bleedingPerSecond() != 0) {
+            helper.fail("Dressing effectiveness, replacement, or legacy migration failed");
+        } else {
+            helper.succeed();
+        }
+    }
 }

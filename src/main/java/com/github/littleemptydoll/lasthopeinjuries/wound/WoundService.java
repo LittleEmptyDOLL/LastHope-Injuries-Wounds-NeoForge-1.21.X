@@ -10,6 +10,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
+import net.minecraft.core.registries.BuiltInRegistries;
 
 /** Server authority for wound state. Client screens and LSO item hooks can call these operations later. */
 public final class WoundService {
@@ -31,7 +32,13 @@ public final class WoundService {
     }
 
     public static boolean bandage(ServerPlayer player, UUID id) {
-        return change(player, id, Wound::bandage, wound -> !wound.bandaged());
+        return change(player, id, Wound::bandage, wound -> wound.dressing() == null
+                || !wound.dressing().freshEnough());
+    }
+
+    public static boolean removeDressing(ServerPlayer player, UUID id) {
+        if (!player.isAlive() || player.isSpectator()) return false;
+        return change(player, id, Wound::removeDressing, Wound::bandaged);
     }
 
     public static boolean clean(ServerPlayer player, UUID id) {
@@ -45,7 +52,11 @@ public final class WoundService {
         ItemStack stack = player.getItemInHand(hand);
         TagKey<Item> tag = bandage ? TreatmentItems.BANDAGES : TreatmentItems.ANTISEPTICS;
         if (!stack.is(tag)) return false;
-        boolean changed = bandage ? bandage(player, id) : clean(player, id);
+        String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
+        boolean changed = bandage
+                ? change(player, id, wound -> wound.bandage(itemId),
+                        wound -> wound.dressing() == null || !wound.dressing().freshEnough())
+                : clean(player, id);
         if (changed && !player.getAbilities().instabuild) stack.shrink(1);
         return changed;
     }

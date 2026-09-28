@@ -119,7 +119,9 @@ public final class WoundEvents {
                                 wound.id() + " " + wound.part() + " " + wound.type()
                                         + " severity=" + wound.severity()
                                         + " infection=" + wound.infection()
-                                        + " bandaged=" + wound.bandaged()), false);
+                                        + " dressing=" + (wound.dressing() == null ? "none"
+                                        : wound.dressing().item() + " clean=" + Math.round(wound.dressing().cleanliness())
+                                        + " soaked=" + Math.round(wound.dressing().saturation()))), false);
                     }
                     return state.wounds().size();
                 }))
