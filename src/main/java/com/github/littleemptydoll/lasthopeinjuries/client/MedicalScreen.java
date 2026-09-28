@@ -124,7 +124,8 @@ public final class MedicalScreen extends Screen {
             int y = top + 35 + row * 22;
             gui.fill(left + 8, y, left + 157, y + 19,
                     wound.id().equals(selectedId) ? 0xFF586B72 : 0xFF303840);
-            gui.drawString(font, label("part", wound.part().name()), left + 12, y + 5, 0xFFFFFF);
+            gui.drawString(font, label("part", wound.part().name()), left + 12, y + 1, 0xFFFFFF);
+            gui.drawString(font, label("type", wound.type().name()), left + 12, y + 10, 0xBFC8D0);
         }
         Wound wound = selected();
         if (wound == null) {
