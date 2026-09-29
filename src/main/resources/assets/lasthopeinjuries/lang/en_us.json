@@ -44,6 +44,8 @@
   "screen.lasthopeinjuries.remove_first": "Remove dressing first",
   "screen.lasthopeinjuries.stabilized": "Stable wound",
   "screen.lasthopeinjuries.active_bleeding": "Active bleeding",
+  "screen.lasthopeinjuries.sutured": "Sutured wound",
+  "screen.lasthopeinjuries.herbs_active": "Herbs: %s min",
   "part.lasthopeinjuries.head": "Head",
   "part.lasthopeinjuries.chest": "Chest",
   "part.lasthopeinjuries.left_arm": "Left arm",

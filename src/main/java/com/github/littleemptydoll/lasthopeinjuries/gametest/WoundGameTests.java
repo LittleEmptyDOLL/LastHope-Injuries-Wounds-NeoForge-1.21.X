@@ -229,6 +229,8 @@ public final class WoundGameTests {
         Wound deep = Wound.create(BodyPart.CHEST, WoundType.DEEP_LACERATION, 3);
         Wound aid = deep.medkit("legendarysurvivaloverhaul:medkit");
         Wound stitched = deep.clean().suture();
+        Wound infected = new Wound(deep.id(), deep.part(), deep.type(), deep.severity(),
+                deep.age(), null, 80, 60, 0, 0, false, 0).medkit("legendarysurvivaloverhaul:medkit");
         Wound herb = aid.herbs();
         Wound normal = aid;
         for (int second = 0; second < 120; second++) {
@@ -240,6 +242,7 @@ public final class WoundGameTests {
         MoodleState pain = MoodleState.from(new WoundState(List.of(deep), 100));
         MoodleState morphine = MoodleState.from(new WoundState(List.of(deep), 100), true);
         if (aid.contamination() != 0 || aid.sutured() || !aid.stabilized()
+                || deep.canSuture() || !deep.clean().canSuture() || infected.infection() != 60
                 || !stitched.sutured() || stitched.bleedingPerSecond() >= deep.bleedingPerSecond()
                 || herb.healingProgress() <= normal.healingProgress()
                 || herb.herbSeconds() != 480 || healthy <= 1 || poor < 0.25 || poor >= 1

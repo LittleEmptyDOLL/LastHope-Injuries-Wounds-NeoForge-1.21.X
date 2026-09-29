@@ -219,12 +219,15 @@ public final class MedicalScreen extends Screen {
                         Math.round(dressing.saturation())), left + 174, top + 204, 0xDADADA);
             }
         }
-        gui.drawString(font, Component.translatable(wound != null && wound.contamination() >= 40
-                ? wound.bandaged() ? "screen.lasthopeinjuries.remove_first"
-                : "screen.lasthopeinjuries.clean_first"
-                : wound != null ? wound.stabilized() ? "screen.lasthopeinjuries.stabilized"
-                : "screen.lasthopeinjuries.active_bleeding"
-                : "screen.lasthopeinjuries.hold_item"),
+        Component status = wound == null ? Component.translatable("screen.lasthopeinjuries.hold_item")
+                : wound.contamination() >= 40 ? Component.translatable(wound.bandaged()
+                ? "screen.lasthopeinjuries.remove_first" : "screen.lasthopeinjuries.clean_first")
+                : wound.herbSeconds() > 0 ? Component.translatable("screen.lasthopeinjuries.herbs_active",
+                (wound.herbSeconds() + 59) / 60)
+                : Component.translatable(wound.sutured() ? "screen.lasthopeinjuries.sutured"
+                : wound.stabilized() ? "screen.lasthopeinjuries.stabilized"
+                : "screen.lasthopeinjuries.active_bleeding");
+        gui.drawString(font, status,
                 left + 174, top + 225, 0xAAB2BD);
         super.render(gui, mouseX, mouseY, partialTick);
     }
