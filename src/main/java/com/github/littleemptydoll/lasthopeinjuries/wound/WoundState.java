@@ -3,6 +3,7 @@ package com.github.littleemptydoll.lasthopeinjuries.wound;
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.List;
+import java.util.function.DoubleSupplier;
 
 /** Blood level is stored; the current bleeding rate is derived from active wounds. */
 public record WoundState(List<Wound> wounds, float bloodLevel) {
@@ -32,7 +33,12 @@ public record WoundState(List<Wound> wounds, float bloodLevel) {
     }
 
     public WoundState advance(int exposure) {
-        List<Wound> next = wounds.stream().map(w -> w.advance(exposure)).filter(w -> !w.healed()).toList();
+        return advance(exposure, Math::random);
+    }
+
+    public WoundState advance(int exposure, DoubleSupplier infectionRoll) {
+        List<Wound> next = wounds.stream().map(w -> w.advance(exposure, infectionRoll.getAsDouble()))
+                .filter(w -> !w.healed()).toList();
         double bleeding = next.stream().mapToDouble(Wound::bleedingPerSecond).sum();
         // A stopped bleed leaves the reserve depleted; blood then recovers slowly over time.
         float level = (float) (bloodLevel - bleeding + (bleeding == 0 ? 0.08 : 0));

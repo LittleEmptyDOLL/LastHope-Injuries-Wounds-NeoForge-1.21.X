@@ -4,6 +4,7 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 /** Immutable so each change can be persisted with Entity#setData. Age is measured in seconds. */
 public record Wound(UUID id, BodyPart part, WoundType type, int severity, int age,
@@ -52,7 +53,13 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
     }
 
     public Wound clean() {
-        return new Wound(id, part, type, severity, age, dressing, 0, Math.max(0, infection - 20));
+        // Washing removes dirt and future exposure risk, but established infection needs medicine.
+        return new Wound(id, part, type, severity, age, dressing, 0, infection);
+    }
+
+    public Wound antibiotics() {
+        return new Wound(id, part, type, severity, age, dressing, contamination,
+                Math.max(0, infection - 40));
     }
 
     public Wound advance() {
@@ -61,6 +68,10 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
 
     /** Exposure is 1 in dry conditions, 2 in rain and 4 when submerged. */
     public Wound advance(int exposure) {
+        return advance(exposure, ThreadLocalRandom.current().nextDouble());
+    }
+
+    public Wound advance(int exposure, double infectionRoll) {
         int nextContamination = contamination;
         Dressing nextDressing = dressing == null ? null : dressing.advance(baseBleedingPerSecond(), exposure);
         // Clean dressings protect the wound; saturated or dirty ones need replacing.
@@ -73,8 +84,14 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
             }
         }
         int nextInfection = infection;
-        if (nextContamination >= 40 && (age + 1) % 15 == 0) nextInfection = Math.min(100, infection + 1);
-        if (nextContamination < 20 && (age + 1) % 30 == 0) nextInfection = Math.max(0, infection - 1);
+        if ((age + 1) % 30 == 0) {
+            // Dirty wounds can inflame, but infection is a separate, non-guaranteed progression.
+            double risk = Math.max(0, nextContamination - 30) / 200.0;
+            if (type == WoundType.BITE) risk *= 1.5;
+            else if (type == WoundType.PUNCTURE) risk *= 1.25;
+            if (infectionRoll < risk) nextInfection = Math.min(100, infection + 1 + nextContamination / 25);
+            else if (nextContamination < 20 && infection < 50) nextInfection = Math.max(0, infection - 1);
+        }
         return new Wound(id, part, type, severity, age + 1, nextDressing,
                 nextContamination, nextInfection);
     }
@@ -88,6 +105,6 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
     }
 
     public boolean healed() {
-        return infection < 40 && age >= type.healSeconds() * severity;
+        return infection < 50 && age >= type.healSeconds() * severity;
     }
 }

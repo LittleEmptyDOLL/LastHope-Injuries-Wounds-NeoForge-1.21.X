@@ -33,12 +33,13 @@ public record Dressing(String item, float cleanliness, float saturation) {
         if (type == WoundType.SCRATCH) return Math.min(1.0F, (100 - saturation) / 25.0F);
         if (type == WoundType.LACERATION) return Math.min(1.0F, (100 - saturation) / 50.0F);
         float base = switch (type) {
-            case DEEP_LACERATION -> item.endsWith(":plaster") ? 0.45F : 0.80F;
-            case PUNCTURE, BITE -> item.endsWith(":plaster") ? 0.70F : 0.85F;
+            case DEEP_LACERATION -> item.endsWith(":plaster") ? 0.45F : 0.95F;
+            case PUNCTURE, BITE -> item.endsWith(":plaster") ? 0.70F : 0.90F;
             default -> 1.0F;
         };
         float remaining = 1.0F - saturation / 100.0F;
-        return base * remaining * remaining;
+        // Compression wears off as the dressing soaks through, without losing most of its benefit early.
+        return base * remaining;
     }
 
     public Dressing advance(double bloodFlow, int exposure) {

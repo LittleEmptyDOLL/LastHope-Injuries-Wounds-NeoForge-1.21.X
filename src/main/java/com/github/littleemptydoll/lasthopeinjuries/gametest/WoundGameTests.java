@@ -57,7 +57,7 @@ public final class WoundGameTests {
         Wound roundTrip = Wound.CODEC.parse(JsonOps.INSTANCE,
                 Wound.CODEC.encodeStart(JsonOps.INSTANCE, soaked).getOrThrow()).getOrThrow();
 
-        if (Math.abs(freshBleeding - openBleeding * 0.2) > 0.0001
+        if (Math.abs(freshBleeding - openBleeding * 0.05) > 0.0001
                 || soaked.dressing() == null || soaked.dressing().saturation() <= 0
                 || soaked.dressing().cleanliness() >= 100 || soaked.bleedingPerSecond() <= freshBleeding
                 || replaced.bleedingPerSecond() >= soaked.bleedingPerSecond()
@@ -77,7 +77,7 @@ public final class WoundGameTests {
         for (int second = 0; second < 120; second++) state = state.advance();
         Wound remaining = state.wounds().getFirst();
         if (remaining.dressing().saturation() >= 30 || remaining.dressing().saturation() <= 0
-                || state.bloodLevel() < 75 || remaining.bleedingPerSecond() >= deep.bleedingPerSecond()) {
+                || state.bloodLevel() < 88 || remaining.bleedingPerSecond() >= deep.bleedingPerSecond()) {
             helper.fail("One bandaged deep cut exhausted the blood reserve too quickly");
         } else {
             helper.succeed();
@@ -106,6 +106,29 @@ public final class WoundGameTests {
                 || dirtyDressing.canBandage() || exposed.canBandage()
                 || exposed.contamination() < 40 || !exposed.clean().canBandage()) {
             helper.fail("Exposure, dressing protection, or cleaning requirement failed");
+        } else {
+            helper.succeed();
+        }
+    }
+
+    @GameTest(template = "empty")
+    public static void infectionRiskAndAntibioticsAreSeparateFromCleaning(GameTestHelper helper) {
+        Wound bite = Wound.create(BodyPart.RIGHT_ARM, WoundType.BITE, 3);
+        Wound unlucky = bite;
+        Wound lucky = bite;
+        for (int second = 0; second < 180; second++) {
+            unlucky = unlucky.advance(4, 0.0);
+            lucky = lucky.advance(4, 1.0);
+        }
+        Wound established = new Wound(bite.id(), bite.part(), bite.type(), bite.severity(),
+                0, null, 80, 82);
+        Wound washed = established.clean();
+        Wound treated = washed.antibiotics();
+        if (unlucky.infection() <= 0 || lucky.infection() != 0
+                || washed.contamination() != 0 || washed.infection() != 82
+                || treated.infection() != 42 || treated.contamination() != 0
+                || treated.antibiotics().infection() != 2) {
+            helper.fail("Infection chance or antibiotic treatment was not independent of washing");
         } else {
             helper.succeed();
         }

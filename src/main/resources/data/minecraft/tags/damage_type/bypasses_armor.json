@@ -1,6 +1,7 @@
 {
   "replace": false,
   "values": [
-    "lasthopeinjuries:bleeding"
+    "lasthopeinjuries:bleeding",
+    "lasthopeinjuries:wound_infection"
   ]
 }

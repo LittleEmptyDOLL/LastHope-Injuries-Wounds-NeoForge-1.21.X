@@ -28,6 +28,8 @@ import net.minecraft.commands.Commands;
 public final class WoundEvents {
     private static final ResourceKey<DamageType> BLEEDING = ResourceKey.create(
             Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath(LastHopeInjuries.MOD_ID, "bleeding"));
+    private static final ResourceKey<DamageType> WOUND_INFECTION = ResourceKey.create(
+            Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath(LastHopeInjuries.MOD_ID, "wound_infection"));
     private WoundEvents() {}
 
     @SubscribeEvent
@@ -39,7 +41,8 @@ public final class WoundEvents {
         if (event.getNewDamage() < 1.0f) return;
         DamageSource source = event.getSource();
         // These damage types are physiological/environmental, and bleeding must not create another wound.
-        if (source.is(BLEEDING) || source.is(DamageTypes.STARVE) || source.is(DamageTypes.DROWN)
+        if (source.is(BLEEDING) || source.is(WOUND_INFECTION)
+                || source.is(DamageTypes.STARVE) || source.is(DamageTypes.DROWN)
                 || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || source.is(DamageTypes.MAGIC)) return;
 
         WoundType type = selectType(player, source, event.getNewDamage());
@@ -89,11 +92,15 @@ public final class WoundEvents {
         if (before.wounds().isEmpty() && before.bloodLevel() >= 100) return;
         int exposure = player.isInWater() ? 4
                 : player.level().isRainingAt(player.blockPosition()) ? 2 : 1;
-        WoundState after = before.advance(exposure);
+        WoundState after = before.advance(exposure, player.getRandom()::nextDouble);
         WoundService.set(player, after);
         // Severe depletion is harmful even after the bleeding has stopped.
         if (after.bloodLevel() <= 15 && player.tickCount % 100 == 0) {
             player.hurt(player.damageSources().source(BLEEDING), after.bloodLevel() <= 5 ? 2 : 1);
+        }
+        // Only severe bacterial wound infection causes periodic harm; zombie infection belongs to The Hordes.
+        if (player.tickCount % 200 == 0 && after.wounds().stream().anyMatch(w -> w.infection() >= 80)) {
+            player.hurt(player.damageSources().source(WOUND_INFECTION), 1);
         }
     }
 

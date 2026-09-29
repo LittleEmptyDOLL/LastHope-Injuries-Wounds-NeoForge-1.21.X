@@ -10,6 +10,7 @@ import net.minecraft.world.item.Item;
 public final class TreatmentItems {
     public static final TagKey<Item> BANDAGES = tag("bandages");
     public static final TagKey<Item> ANTISEPTICS = tag("antiseptics");
+    public static final TagKey<Item> ANTIBIOTICS = tag("antibiotics");
 
     private static TagKey<Item> tag(String path) {
         return TagKey.create(Registries.ITEM,

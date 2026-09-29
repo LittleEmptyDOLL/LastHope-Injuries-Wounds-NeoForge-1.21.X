@@ -29,6 +29,7 @@ public final class MedicalScreen extends Screen {
     private int page;
     private Button bandageButton;
     private Button cleanButton;
+    private Button antibioticsButton;
     private Button removeButton;
     private Button previousButton;
     private Button nextButton;
@@ -48,13 +49,16 @@ public final class MedicalScreen extends Screen {
                 b -> page++).bounds(left + 135, top + 151, 20, 20).build());
         bandageButton = addRenderableWidget(Button.builder(
                 Component.translatable("screen.lasthopeinjuries.bandage"),
-                b -> treat(true)).bounds(left + 169, top + 160, 68, 20).build());
+                b -> treat(0)).bounds(left + 169, top + 160, 68, 20).build());
         cleanButton = addRenderableWidget(Button.builder(
                 Component.translatable("screen.lasthopeinjuries.clean"),
-                b -> treat(false)).bounds(left + 240, top + 160, 68, 20).build());
+                b -> treat(1)).bounds(left + 240, top + 160, 68, 20).build());
         removeButton = addRenderableWidget(Button.builder(
                 Component.translatable("screen.lasthopeinjuries.remove_dressing"),
                 b -> removeDressing()).bounds(left + 8, top + 190, 86, 20).build());
+        antibioticsButton = addRenderableWidget(Button.builder(
+                Component.translatable("screen.lasthopeinjuries.antibiotics"),
+                b -> treat(3)).bounds(left + 8, top + 214, 149, 20).build());
     }
 
     private Wound selected() {
@@ -77,12 +81,19 @@ public final class MedicalScreen extends Screen {
         return null;
     }
 
-    private void treat(boolean bandage) {
+    private void treat(int action) {
         Wound wound = selected();
-        InteractionHand hand = handFor(bandage ? TreatmentItems.BANDAGES : TreatmentItems.ANTISEPTICS);
+        TagKey<Item> tag = switch (action) {
+            case 0 -> TreatmentItems.BANDAGES;
+            case 1 -> TreatmentItems.ANTISEPTICS;
+            case 3 -> TreatmentItems.ANTIBIOTICS;
+            default -> null;
+        };
+        if (tag == null) return;
+        InteractionHand hand = handFor(tag);
         if (wound != null && hand != null) {
             PacketDistributor.sendToServer(new WoundNetwork.Treat(
-                    wound.id().toString(), bandage ? 0 : 1, hand == InteractionHand.MAIN_HAND ? 0 : 1));
+                    wound.id().toString(), action, hand == InteractionHand.MAIN_HAND ? 0 : 1));
         }
     }
 
@@ -105,9 +116,10 @@ public final class MedicalScreen extends Screen {
                 ? "screen.lasthopeinjuries.replace_dressing" : "screen.lasthopeinjuries.bandage"));
         bandageButton.active = wound != null && wound.canBandage()
                 && handFor(TreatmentItems.BANDAGES) != null;
-        cleanButton.active = wound != null && !wound.bandaged()
-                && (wound.contamination() > 0 || wound.infection() > 0)
+        cleanButton.active = wound != null && !wound.bandaged() && wound.contamination() > 0
                 && handFor(TreatmentItems.ANTISEPTICS) != null;
+        antibioticsButton.active = wound != null && wound.infection() > 0
+                && handFor(TreatmentItems.ANTIBIOTICS) != null;
         removeButton.active = wound != null && wound.bandaged();
     }
 
@@ -155,6 +167,11 @@ public final class MedicalScreen extends Screen {
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.no_wounds"),
                     left + 180, top + 45, 0xCACACA);
         } else {
+            String stage = wound.infection() >= 80 ? "severe" : wound.infection() >= 50 ? "infected"
+                    : wound.infection() >= 20 ? "inflamed" : wound.infection() > 0
+                    || wound.contamination() >= 40 ? "at_risk" : "clean";
+            gui.drawString(font, Component.translatable("screen.lasthopeinjuries.stage." + stage),
+                    left + 8, top + 176, wound.infection() >= 50 ? 0xFF8888 : 0xDADADA);
             gui.drawString(font, label("type", wound.type().name()), left + 174, top + 39, 0xFFFFFF);
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.severity", wound.severity()),
                     left + 174, top + 58, 0xDADADA);
@@ -183,8 +200,9 @@ public final class MedicalScreen extends Screen {
             }
         }
         gui.drawString(font, Component.translatable(wound != null && wound.contamination() >= 40
-                ? "screen.lasthopeinjuries.clean_first" : "screen.lasthopeinjuries.hold_item"),
-                left + 9, top + 225, 0xAAB2BD);
+                ? wound.bandaged() ? "screen.lasthopeinjuries.remove_first"
+                : "screen.lasthopeinjuries.clean_first" : "screen.lasthopeinjuries.hold_item"),
+                left + 174, top + 225, 0xAAB2BD);
         super.render(gui, mouseX, mouseY, partialTick);
     }
 

@@ -32,12 +32,12 @@ public final class WoundNetwork {
             if (!(context.player() instanceof ServerPlayer player)) return;
             try {
                 UUID id = UUID.fromString(payload.id());
-                if (payload.action() < 0 || payload.action() > 2
+                if (payload.action() < 0 || payload.action() > 3
                         || payload.hand() < 0 || payload.hand() > 1) return;
                 if (payload.action() == 2) {
                     WoundService.removeDressing(player, id);
                 } else {
-                    WoundService.treat(player, id, payload.action() == 0,
+                    WoundService.treat(player, id, payload.action(),
                             payload.hand() == 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
                 }
             } catch (IllegalArgumentException ignored) {

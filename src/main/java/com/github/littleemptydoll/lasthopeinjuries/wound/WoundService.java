@@ -42,19 +42,31 @@ public final class WoundService {
 
     public static boolean clean(ServerPlayer player, UUID id) {
         return change(player, id, Wound::clean,
-                wound -> !wound.bandaged() && (wound.contamination() > 0 || wound.infection() > 0));
+                wound -> !wound.bandaged() && wound.contamination() > 0);
+    }
+
+    public static boolean antibiotics(ServerPlayer player, UUID id) {
+        return change(player, id, Wound::antibiotics, wound -> wound.infection() > 0);
     }
 
     /** Called by network handlers; the item, hand and target are checked on the server. */
-    public static boolean treat(ServerPlayer player, UUID id, boolean bandage, InteractionHand hand) {
+    public static boolean treat(ServerPlayer player, UUID id, int action, InteractionHand hand) {
         if (!player.isAlive() || player.isSpectator()) return false;
         ItemStack stack = player.getItemInHand(hand);
-        TagKey<Item> tag = bandage ? TreatmentItems.BANDAGES : TreatmentItems.ANTISEPTICS;
+        TagKey<Item> tag = switch (action) {
+            case 0 -> TreatmentItems.BANDAGES;
+            case 1 -> TreatmentItems.ANTISEPTICS;
+            case 3 -> TreatmentItems.ANTIBIOTICS;
+            default -> { return false; }
+        };
         if (!stack.is(tag)) return false;
         String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
-        boolean changed = bandage
-                ? change(player, id, wound -> wound.bandage(itemId), Wound::canBandage)
-                : clean(player, id);
+        boolean changed = switch (action) {
+            case 0 -> change(player, id, wound -> wound.bandage(itemId), Wound::canBandage);
+            case 1 -> clean(player, id);
+            case 3 -> antibiotics(player, id);
+            default -> false;
+        };
         if (changed && !player.getAbilities().instabuild) stack.shrink(1);
         return changed;
     }
