@@ -57,9 +57,9 @@ public final class WoundService {
             case 0 -> TreatmentItems.BANDAGES;
             case 1 -> TreatmentItems.ANTISEPTICS;
             case 3 -> TreatmentItems.ANTIBIOTICS;
-            default -> { return false; }
+            default -> null;
         };
-        if (!stack.is(tag)) return false;
+        if (tag == null || !stack.is(tag)) return false;
         String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         boolean changed = switch (action) {
             case 0 -> change(player, id, wound -> wound.bandage(itemId), Wound::canBandage);
