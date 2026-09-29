@@ -3,6 +3,7 @@ package com.github.littleemptydoll.lasthopeinjuries.gametest;
 import com.github.littleemptydoll.lasthopeinjuries.LastHopeInjuries;
 import com.github.littleemptydoll.lasthopeinjuries.moodle.MoodleState;
 import com.github.littleemptydoll.lasthopeinjuries.wound.BodyPart;
+import com.github.littleemptydoll.lasthopeinjuries.wound.RecoveryModifier;
 import com.github.littleemptydoll.lasthopeinjuries.wound.Wound;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundState;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundType;
@@ -60,9 +61,10 @@ public final class WoundGameTests {
 
         if (Math.abs(freshBleeding - openBleeding * 0.05) > 0.0001
                 || soaked.dressing() == null || soaked.dressing().saturation() <= 0
-                || soaked.dressing().cleanliness() >= 100 || soaked.bleedingPerSecond() <= freshBleeding
+                || soaked.dressing().cleanliness() >= 100 || soaked.bleedingPerSecond() >= freshBleeding
                 || replaced.bleedingPerSecond() >= soaked.bleedingPerSecond()
-                || replaced.removeDressing().bleedingPerSecond() != openBleeding
+                || replaced.removeDressing().bleedingPerSecond()
+                        != soaked.removeDressing().bleedingPerSecond()
                 || !soaked.equals(roundTrip) || !migrated.bandaged()
                 || migrated.bleedingPerSecond() != 0) {
             helper.fail("Dressing effectiveness, replacement, or legacy migration failed");
@@ -99,7 +101,8 @@ public final class WoundGameTests {
         Wound dirtyDressing = new Wound(covered.id(), covered.part(), covered.type(), covered.severity(),
                 covered.age(), new com.github.littleemptydoll.lasthopeinjuries.wound.Dressing(
                         "legendarysurvivaloverhaul:bandage", 20, covered.dressing().saturation()),
-                covered.contamination(), covered.infection(), covered.healingProgress());
+                covered.contamination(), covered.infection(), covered.healingProgress(),
+                covered.clotting(), covered.sutured(), covered.herbSeconds());
         Wound exposed = dirtyDressing.removeDressing();
         if (submerged.contamination() <= dry.contamination()
                 || covered.contamination() != deep.contamination()
@@ -122,7 +125,7 @@ public final class WoundGameTests {
             lucky = lucky.advance(4, 1.0);
         }
         Wound established = new Wound(bite.id(), bite.part(), bite.type(), bite.severity(),
-                0, null, 80, 82, 0);
+                0, null, 80, 82, 0, 0, false, 0);
         Wound washed = established.clean();
         Wound treated = washed.antibiotics();
         if (unlucky.infection() <= 0 || lucky.infection() != 0
@@ -145,14 +148,15 @@ public final class WoundGameTests {
             treated = treated.advance(1, 1.0);
         }
         Wound infected = new Wound(treated.id(), treated.part(), treated.type(), treated.severity(),
-                treated.age(), treated.dressing(), treated.contamination(), 60, treated.healingProgress());
+                treated.age(), treated.dressing(), treated.contamination(), 60, treated.healingProgress(),
+                treated.clotting(), treated.sutured(), treated.herbSeconds());
         Wound infectedNext = infected.advance(1, 1.0);
         Wound decoded = Wound.CODEC.parse(JsonOps.INSTANCE,
                 Wound.CODEC.encodeStart(JsonOps.INSTANCE, treated).getOrThrow()).getOrThrow();
         JsonObject legacy = Wound.CODEC.encodeStart(JsonOps.INSTANCE, treated).getOrThrow().getAsJsonObject();
         legacy.remove("healing_progress");
         Wound migrated = Wound.CODEC.parse(JsonOps.INSTANCE, legacy).getOrThrow();
-        if (untreated.healingProgress() != 0 || treated.healingProgress() <= 0
+        if (untreated.healingProgress() <= 0 || treated.healingProgress() <= untreated.healingProgress()
                 || infectedNext.healingProgress() != infected.healingProgress()
                 || !treated.equals(decoded) || migrated.healingProgress() <= 0) {
             helper.fail("Healing progression, stabilization, or legacy migration failed");
@@ -189,12 +193,60 @@ public final class WoundGameTests {
         Wound c = Wound.create(BodyPart.LEFT_LEG, WoundType.SCRATCH, 1);
         MoodleState small = MoodleState.from(new WoundState(List.of(a, b, c), 29));
         Wound infected = new Wound(a.id(), a.part(), a.type(), a.severity(), a.age(),
-                a.dressing(), a.contamination(), 85, a.healingProgress());
+                a.dressing(), a.contamination(), 85, a.healingProgress(),
+                a.clotting(), a.sutured(), a.herbSeconds());
         MoodleState sick = MoodleState.from(new WoundState(List.of(infected), 100));
         if (small.pain() != 2 || small.bloodLoss() != 3
                 || Math.abs(small.outgoingDamageMultiplier() - 0.54F) > 0.001F
                 || sick.sickness() != 3 || MoodleState.from(WoundState.empty()).pain() != 0) {
             helper.fail("Pain aggregation, blood loss penalty, or infection moodle failed");
+        } else {
+            helper.succeed();
+        }
+    }
+
+    @GameTest(template = "empty")
+    public static void lightWoundsClotNaturallyAndDeepCutsRemainDangerous(GameTestHelper helper) {
+        Wound scratch = Wound.create(BodyPart.LEFT_ARM, WoundType.SCRATCH, 5);
+        Wound deep = Wound.create(BodyPart.CHEST, WoundType.DEEP_LACERATION, 5);
+        WoundState shallowState = new WoundState(List.of(scratch), 100);
+        WoundState deepState = new WoundState(List.of(deep), 100);
+        for (int second = 0; second < 180; second++) {
+            shallowState = shallowState.advance(1, () -> 1.0);
+            deepState = deepState.advance(1, () -> 1.0);
+        }
+        if (shallowState.bleedingRate() != 0 || shallowState.bloodLevel() < 98
+                || deepState.bleedingRate() <= 0 || deepState.bloodLevel() <= 40
+                || deepState.wounds().getFirst().clotting() < 0.85F) {
+            helper.fail("Natural clotting did not make light wounds survivable while retaining deep-cut risk");
+        } else {
+            helper.succeed();
+        }
+    }
+
+    @GameTest(template = "empty")
+    public static void medkitHerbsSuturesAndRecoveryHaveDistinctRoles(GameTestHelper helper) {
+        Wound deep = Wound.create(BodyPart.CHEST, WoundType.DEEP_LACERATION, 3);
+        Wound aid = deep.medkit("legendarysurvivaloverhaul:medkit");
+        Wound stitched = deep.clean().suture();
+        Wound herb = aid.herbs();
+        Wound normal = aid;
+        for (int second = 0; second < 120; second++) {
+            herb = herb.advance(1, 1.0, 1);
+            normal = normal.advance(1, 1.0, 1);
+        }
+        double healthy = RecoveryModifier.calculate(20, 20, 0, 0, false, 0);
+        double poor = RecoveryModifier.calculate(0, 0, 2, 100000, false, 3);
+        MoodleState pain = MoodleState.from(new WoundState(List.of(deep), 100));
+        MoodleState morphine = MoodleState.from(new WoundState(List.of(deep), 100), true);
+        if (aid.contamination() != 0 || aid.sutured() || !aid.stabilized()
+                || !stitched.sutured() || stitched.bleedingPerSecond() >= deep.bleedingPerSecond()
+                || herb.healingProgress() <= normal.healingProgress()
+                || herb.herbSeconds() != 480 || healthy <= 1 || poor < 0.25 || poor >= 1
+                || morphine.pain() >= pain.pain()
+                || !Wound.CODEC.parse(JsonOps.INSTANCE,
+                        Wound.CODEC.encodeStart(JsonOps.INSTANCE, herb).getOrThrow()).getOrThrow().equals(herb)) {
+            helper.fail("Treatment and recovery effects did not remain distinct or persist");
         } else {
             helper.succeed();
         }

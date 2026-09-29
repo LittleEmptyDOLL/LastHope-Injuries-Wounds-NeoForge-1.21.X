@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {"item": "minecraft:string"},
+    {"item": "minecraft:iron_nugget"},
+    {"item": "minecraft:leather"}
+  ],
+  "result": {"id": "lasthopeinjuries:sutures", "count": 2}
+}

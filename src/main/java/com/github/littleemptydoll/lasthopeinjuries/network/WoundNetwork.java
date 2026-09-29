@@ -19,7 +19,7 @@ public final class WoundNetwork {
     private WoundNetwork() {}
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("4");
+        var registrar = event.registrar("5");
         registrar.playToClient(Sync.TYPE, Sync.STREAM_CODEC,
                 (payload, context) -> ClientWounds.receive(payload.state(), payload.open()));
         registrar.playToServer(Request.TYPE, Request.STREAM_CODEC, (payload, context) -> {
@@ -31,7 +31,7 @@ public final class WoundNetwork {
             if (!(context.player() instanceof ServerPlayer player)) return;
             try {
                 UUID id = UUID.fromString(payload.id());
-                if (payload.action() < 0 || payload.action() > 3) return;
+                if (payload.action() < 0 || payload.action() > 6) return;
                 if (payload.action() == 2) {
                     WoundService.removeDressing(player, id);
                 } else {

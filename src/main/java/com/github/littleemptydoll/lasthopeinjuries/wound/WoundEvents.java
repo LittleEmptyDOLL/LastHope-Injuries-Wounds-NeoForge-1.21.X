@@ -5,7 +5,9 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import java.util.UUID;
 import com.github.littleemptydoll.lasthopeinjuries.LastHopeInjuries;
 import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoWoundBridge;
+import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoRecoveryBridge;
 import com.github.littleemptydoll.lasthopeinjuries.moodle.MoodleState;
+import net.minecraft.stats.Stats;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -93,7 +95,14 @@ public final class WoundEvents {
         if (before.wounds().isEmpty() && before.bloodLevel() >= 100) return;
         int exposure = player.isInWater() ? 4
                 : player.level().isRainingAt(player.blockPosition()) ? 2 : 1;
-        WoundState after = before.advance(exposure, player.getRandom()::nextDouble);
+        int hydration = ModList.get().isLoaded("legendarysurvivaloverhaul")
+                ? LsoRecoveryBridge.hydration(player) : 20;
+        int temperature = ModList.get().isLoaded("legendarysurvivaloverhaul")
+                ? LsoRecoveryBridge.temperatureSeverity(player) : 0;
+        int restTicks = player.getStats().getValue(Stats.CUSTOM.get(Stats.TIME_SINCE_REST));
+        double recovery = RecoveryModifier.calculate(player.getFoodData().getFoodLevel(), hydration,
+                temperature, restTicks, player.isSleeping(), MoodleState.from(before).sickness());
+        WoundState after = before.advance(exposure, player.getRandom()::nextDouble, recovery);
         WoundService.set(player, after);
         // Severe depletion is harmful even after the bleeding has stopped.
         if (after.bloodLevel() <= 15 && player.tickCount % 100 == 0) {
@@ -108,7 +117,9 @@ public final class WoundEvents {
     @SubscribeEvent
     public static void onOutgoingDamage(LivingDamageEvent.Pre event) {
         if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)) return;
-        float factor = MoodleState.from(WoundService.get(attacker)).outgoingDamageMultiplier();
+        boolean painkiller = ModList.get().isLoaded("legendarysurvivaloverhaul")
+                && LsoRecoveryBridge.painSuppressed(attacker);
+        float factor = MoodleState.from(WoundService.get(attacker), painkiller).outgoingDamageMultiplier();
         if (factor < 1) event.setNewDamage(event.getNewDamage() * factor);
     }
 

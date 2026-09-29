@@ -7,6 +7,10 @@ import com.github.littleemptydoll.lasthopeinjuries.wound.WoundState;
 /** Derived from the synced wound state on both sides; these levels never need separate persistence. */
 public record MoodleState(int bleeding, int bloodLoss, int pain, int sickness) {
     public static MoodleState from(WoundState state) {
+        return from(state, false);
+    }
+
+    public static MoodleState from(WoundState state, boolean painSuppressed) {
         double rate = state.bleedingRate();
         int bleeding = rate < 0.01 ? 0 : rate < 0.10 ? 1 : rate < 0.30 ? 2 : rate < 0.60 ? 3 : 4;
         float blood = state.bloodLevel();
@@ -26,7 +30,8 @@ public record MoodleState(int bleeding, int bloodLoss, int pain, int sickness) {
             double severity = 0.5 + wound.effectiveSeverity() * 0.25;
             double infection = 1 + wound.infection() / 100.0 * 0.8;
             double location = wound.part() == BodyPart.HEAD || wound.part() == BodyPart.CHEST ? 1.2 : 1;
-            double care = wound.dressing() != null && wound.dressing().cleanliness() >= 40 ? 0.85 : 1;
+            double care = wound.dressing() != null && wound.dressing().cleanliness() >= 40
+                    ? wound.dressing().item().endsWith(":medkit") ? 0.65 : 0.85 : 1;
             painScore += basePain * severity * infection * location * care
                     * (1 - wound.healingProgress() / 200.0);
             // Inflammation adds pain; sickness begins only at established bacterial infection.
@@ -35,6 +40,7 @@ public record MoodleState(int bleeding, int bloodLoss, int pain, int sickness) {
                 infectedWounds++;
             }
         }
+        if (painSuppressed) painScore *= 0.2;
         int pain = painScore < 0.2 ? 0 : painScore < 0.6 ? 1 : painScore < 3 ? 2
                 : painScore < 6 ? 3 : 4;
         infectionScore += Math.max(0, infectedWounds - 1) * 10;

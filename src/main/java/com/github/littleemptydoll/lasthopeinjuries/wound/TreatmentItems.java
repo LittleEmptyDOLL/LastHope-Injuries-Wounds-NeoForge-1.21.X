@@ -11,6 +11,9 @@ public final class TreatmentItems {
     public static final TagKey<Item> BANDAGES = tag("bandages");
     public static final TagKey<Item> ANTISEPTICS = tag("antiseptics");
     public static final TagKey<Item> ANTIBIOTICS = tag("antibiotics");
+    public static final TagKey<Item> MEDKITS = tag("medkits");
+    public static final TagKey<Item> HERBS = tag("healing_herbs");
+    public static final TagKey<Item> SUTURES = tag("sutures");
 
     private static TagKey<Item> tag(String path) {
         return TagKey.create(Registries.ITEM,

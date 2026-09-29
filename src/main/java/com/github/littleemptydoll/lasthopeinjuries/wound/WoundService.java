@@ -55,6 +55,9 @@ public final class WoundService {
             case 0 -> TreatmentItems.BANDAGES;
             case 1 -> TreatmentItems.ANTISEPTICS;
             case 3 -> TreatmentItems.ANTIBIOTICS;
+            case 4 -> TreatmentItems.MEDKITS;
+            case 5 -> TreatmentItems.HERBS;
+            case 6 -> TreatmentItems.SUTURES;
             default -> null;
         };
         if (tag == null) return false;
@@ -76,6 +79,10 @@ public final class WoundService {
             case 0 -> change(player, id, wound -> wound.bandage(itemId), Wound::canBandage);
             case 1 -> clean(player, id);
             case 3 -> antibiotics(player, id);
+            case 4 -> change(player, id, wound -> wound.medkit(itemId), Wound::canMedkit);
+            case 5 -> player.getFoodData().getFoodLevel() > 3
+                    && change(player, id, Wound::herbs, Wound::canUseHerbs);
+            case 6 -> change(player, id, Wound::suture, Wound::canSuture);
             default -> false;
         };
         if (changed && !player.getAbilities().instabuild) stack.shrink(1);

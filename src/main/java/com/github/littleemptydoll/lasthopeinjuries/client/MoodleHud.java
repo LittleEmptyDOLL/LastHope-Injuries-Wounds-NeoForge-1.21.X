@@ -1,6 +1,7 @@
 package com.github.littleemptydoll.lasthopeinjuries.client;
 
 import com.github.littleemptydoll.lasthopeinjuries.LastHopeInjuries;
+import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoRecoveryBridge;
 import com.github.littleemptydoll.lasthopeinjuries.moodle.MoodleState;
 import com.github.littleemptydoll.lasthopeinjuries.moodle.MoodleType;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundState;
@@ -10,6 +11,7 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.fml.ModList;
 
 /** The medical moodles occupy their own HUD layer, separate from potion effects. */
 public final class MoodleHud {
@@ -27,7 +29,9 @@ public final class MoodleHud {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.options.hideGui || minecraft.screen != null) return;
         WoundState wounds = ClientWounds.state();
-        MoodleState moodles = MoodleState.from(wounds);
+        boolean painkiller = ModList.get().isLoaded("legendarysurvivaloverhaul")
+                && LsoRecoveryBridge.painSuppressed(minecraft.player);
+        MoodleState moodles = MoodleState.from(wounds, painkiller);
         int x = gui.guiWidth() - 170;
         int y = 7;
         for (MoodleType type : MoodleType.values()) {
