@@ -5,6 +5,7 @@ import com.github.littleemptydoll.lasthopeinjuries.moodle.MoodleState;
 import com.github.littleemptydoll.lasthopeinjuries.wound.BodyPart;
 import com.github.littleemptydoll.lasthopeinjuries.wound.RecoveryModifier;
 import com.github.littleemptydoll.lasthopeinjuries.wound.Wound;
+import com.github.littleemptydoll.lasthopeinjuries.wound.WoundGenerator;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundState;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundType;
 import com.google.gson.JsonObject;
@@ -12,6 +13,7 @@ import com.mojang.serialization.JsonOps;
 import java.util.List;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.util.RandomSource;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -19,6 +21,60 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class WoundGameTests {
     private WoundGameTests() {}
+
+    @GameTest(template = "empty")
+    public static void hitLocationAndCauseRespectPhysicalDamage(GameTestHelper helper) {
+        RandomSource random = RandomSource.create(3492);
+        int feet = 0;
+        int legs = 0;
+        for (int i = 0; i < 500; i++) {
+            BodyPart part = WoundGenerator.selectPart(WoundGenerator.Cause.FALL, random);
+            if (part == BodyPart.LEFT_FOOT || part == BodyPart.RIGHT_FOOT) feet++;
+            else if (part == BodyPart.LEFT_LEG || part == BodyPart.RIGHT_LEG) legs++;
+            else {
+                helper.fail("A fall hit an upper body part without an LSO limb assignment");
+                return;
+            }
+        }
+        Wound fire = null;
+        Wound projectile = null;
+        for (int i = 0; i < 100 && (fire == null || projectile == null); i++) {
+            if (fire == null) fire = WoundGenerator.roll(WoundGenerator.Cause.FIRE, 6,
+                    BodyPart.HEAD, 0, 1, random);
+            if (projectile == null) projectile = WoundGenerator.roll(WoundGenerator.Cause.PROJECTILE, 6,
+                    BodyPart.RIGHT_ARM, 0, 1, random);
+        }
+        if (feet <= legs || fire == null || fire.type() != WoundType.BURN || fire.part() != BodyPart.HEAD
+                || projectile == null || projectile.type() != WoundType.PUNCTURE
+                || projectile.part() != BodyPart.RIGHT_ARM
+                || WoundGenerator.roll(null, 6, BodyPart.CHEST, 0, 1, random) != null) {
+            helper.fail("Hit cause, LSO-selected part, or non-physical damage was mishandled");
+        } else helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void EquippedArmorReducesWoundRiskAndDepth(GameTestHelper helper) {
+        RandomSource unarmoredRandom = RandomSource.create(93);
+        RandomSource armoredRandom = RandomSource.create(93);
+        int unarmored = 0;
+        int armored = 0;
+        int unarmoredSeverity = 0;
+        int armoredSeverity = 0;
+        for (int i = 0; i < 2000; i++) {
+            Wound exposed = WoundGenerator.roll(WoundGenerator.Cause.SHARP, 9,
+                    BodyPart.CHEST, 0, 1, unarmoredRandom);
+            Wound protectedWound = WoundGenerator.roll(WoundGenerator.Cause.SHARP, 9,
+                    BodyPart.CHEST, 8, 1, armoredRandom);
+            if (exposed != null) { unarmored++; unarmoredSeverity += exposed.severity(); }
+            if (protectedWound != null) { armored++; armoredSeverity += protectedWound.severity(); }
+        }
+        if (unarmored < 900 || armored >= unarmored * 0.5 || armoredSeverity >= armored * 3
+                || unarmoredSeverity != unarmored * 3
+                || WoundGenerator.protection(WoundType.LACERATION, 8, 0.25)
+                    >= WoundGenerator.protection(WoundType.LACERATION, 8, 1)) {
+            helper.fail("Armor points or durability did not lower the risk and severity of a cut");
+        } else helper.succeed();
+    }
 
     @GameTest(template = "empty")
     public static void woundStatePersistsAndBleeds(GameTestHelper helper) {

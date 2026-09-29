@@ -1,28 +1,21 @@
 # Last Hope: Injuries and Wounds
 
-NeoForge 1.21.1 mod, currently an early server-side implementation of persistent physical wounds.
+Physical wounds for NeoForge 1.21.1, with optional Legendary Survival Overhaul (LSO) integration.
 
-## Implemented
+## Wounds
 
-- Eight body regions: head, chest, left/right arms, left/right legs and left/right feet. These correspond to LSO's `BodyPartEnum` names.
-- Bruises, scratches, lacerations, deep lacerations, punctures, burns and bites. A bite here is a physical wound; zombie infection remains with The Hordes.
-- Wounds are rolled after actual player health damage, including armor and absorption. Equipped armor in the corresponding slot reduces wound probability according to wound type. This is separate from LSO's limb damage resistance.
-- Persistent wounds accumulate blood loss; bandaging reduces bleeding and cleaning reduces contamination. Dirty wounds can develop local infection. Wounds heal over time when infection is low. Blood loss causes periodic health damage and recovers after bleeding stops.
-- Server API: `WoundService.add`, `bandage`, `clean` and `get`. State is serialized as a NeoForge entity data attachment and is cleared on death.
-- Press H (remappable) to open the wound screen. The server sends the current state on opening and whenever it changes. Select a wound to treat it with an item held in either hand; the server validates the wound and item before consuming one item.
+- Bruises, scratches, lacerations, deep lacerations, punctures, burns and bites can affect the head, chest, left/right arms, left/right legs and left/right feet. A bite is a physical wound; zombie infection belongs to The Hordes.
+- A wound is rolled after actual health damage. Falls favor feet and legs, projectiles cause punctures, fire causes burns, explosions can bruise or cut, zombie attacks can bite, and sharp weapons favor cuts. Physiological and magical damage does not create a physical wound. When LSO assigns limb damage, its body part takes precedence over our location roll.
+- The armor item on the affected region lowers wound risk based on its armor attribute and remaining durability. Armor may also reduce wound severity. This is separate from the vanilla reduction in incoming health damage and LSO's limb damage resistance.
+- Bleeding drains a persistent blood reserve. Light wounds clot naturally, while deep cuts remain dangerous. Dressings slow bleeding, soak over time and become dirty. Exposure can contaminate wounds; infection slows healing. Food, LSO hydration and temperature, sleep and wound infection affect recovery.
+- The client HUD shows bleeding, blood loss, pain and sickness moodles. Pain also reduces outgoing damage. LSO morphine suppresses pain while active.
 
-These mechanics are provisional balance values. The screen displays this mod's wounds only; LSO limb health and Moodles are not yet displayed.
+## Treatment
 
-Treatment items are configured through the item tags `lasthopeinjuries:bandages` and `lasthopeinjuries:antiseptics`. The bandage tag optionally includes LSO's `bandage` and `plaster` IDs. The antiseptic tag starts empty and can be populated by a datapack. Treatment through this screen affects the wound; it does not yet trigger LSO limb healing.
+Press H (remappable) to open or close the medical screen without pausing the game. Select a wound to see available treatments. Items may be anywhere in the player's inventory; the server validates and consumes them. Bandages, plaster, antiseptics, antibiotics, medkits and herbs include optional LSO items. This mod also supplies sutures for cleaned deep cuts.
 
-## Development commands
+The medical item tags live under `src/main/resources/data/lasthopeinjuries/tags/item`. Datapacks can add suitable items to those tags. The medical screen treats this mod's wounds; it does not directly heal LSO limb health.
 
-Operators can run `/wounds list`, `/wounds add <part> <type> <severity>`, `/wounds bandage <uuid>` and `/wounds clean <uuid>`. The commands are for testing the mechanics until the treatment interface is implemented. Parts and wound types use the uppercase enum names in the code; input is case insensitive.
+## Development
 
-## LSO compatibility
-
-The `1.21.1` branch of [LegendarySurvivalOverhaul](https://github.com/sfiomn/LegendarySurvivalOverhaul/tree/1.21.1) currently declares Minecraft 1.20.1 and Forge 47.4.0 in `gradle.properties`. This repository therefore does not compile against that branch. Once a compatible NeoForge 1.21.1 build is available, the planned integration will connect LSO medical items and body health to a combined medical screen, while keeping this wound data and Moodles independent.
-
-## Build
-
-Use JDK 21 and `./gradlew build`. The GitHub Actions workflow also runs this build on pushes.
+Use JDK 21 and `./gradlew build`. The GitHub Actions workflow runs the build and GameTests on pushes. Operators can inspect and inject test wounds with `/wounds list` and `/wounds add <part> <type> <severity>`; `/wounds bandage <uuid>` and `/wounds clean <uuid>` also remain available.

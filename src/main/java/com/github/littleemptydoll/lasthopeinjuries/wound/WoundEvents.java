@@ -16,11 +16,10 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
-import net.minecraft.world.damagesource.DamageTypes;
+import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.entity.monster.Zombie;
-import net.minecraft.world.entity.projectile.Projectile;
-import net.minecraft.world.item.ArmorItem;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -45,47 +44,25 @@ public final class WoundEvents {
         DamageSource source = event.getSource();
         // These damage types are physiological/environmental, and bleeding must not create another wound.
         if (source.is(BLEEDING) || source.is(WOUND_INFECTION)
-                || source.is(DamageTypes.STARVE) || source.is(DamageTypes.DROWN)
-                || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY) || source.is(DamageTypes.MAGIC)) return;
+                || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return;
 
-        WoundType type = selectType(player, source, event.getNewDamage());
-        BodyPart part = lsoPart != null ? lsoPart : selectPart(player, source);
+        WoundGenerator.Cause cause = WoundGenerator.cause(source);
+        if (cause == null) return;
+        BodyPart part = lsoPart != null ? lsoPart : WoundGenerator.selectPart(cause, player.getRandom());
         EquipmentSlot slot = part.armorSlot();
-        boolean covered = player.getItemBySlot(slot).getItem() instanceof ArmorItem;
-        double resistance = covered ? protection(type) : 0.0;
-        double chance = Math.min(0.85, 0.16 + event.getNewDamage() * 0.055) * (1 - resistance);
-        if (player.getRandom().nextDouble() >= chance) return;
-
-        int severity = Math.max(1, Math.min(5, (int) Math.ceil(event.getNewDamage() / 3.0)));
-        if (covered && resistance >= 0.5 && severity > 1) severity--;
-        WoundService.add(player, Wound.create(part, type, severity));
-    }
-
-    private static WoundType selectType(ServerPlayer player, DamageSource source, float damage) {
-        if (source.is(DamageTypeTags.IS_FIRE)) return WoundType.BURN;
-        if (source.is(DamageTypes.FALL) || source.is(DamageTypes.FLY_INTO_WALL)
-                || source.is(DamageTypeTags.IS_EXPLOSION)) return WoundType.BRUISE;
-        if (source.getDirectEntity() instanceof Projectile) return WoundType.PUNCTURE;
-        if (source.getEntity() instanceof Zombie && player.getRandom().nextFloat() < 0.25f) return WoundType.BITE;
-        if (damage >= 8) return WoundType.DEEP_LACERATION;
-        return damage >= 3 ? WoundType.LACERATION : WoundType.SCRATCH;
-    }
-
-    private static BodyPart selectPart(ServerPlayer player, DamageSource source) {
-        if (source.is(DamageTypes.FALL)) {
-            return player.getRandom().nextBoolean() ? BodyPart.LEFT_LEG : BodyPart.RIGHT_LEG;
-        }
-        BodyPart[] parts = BodyPart.values();
-        return parts[player.getRandom().nextInt(parts.length)];
-    }
-
-    private static double protection(WoundType type) {
-        return switch (type) {
-            case BRUISE -> 0.25;
-            case PUNCTURE, BITE -> 0.35;
-            case BURN -> 0.40;
-            case SCRATCH, LACERATION, DEEP_LACERATION -> 0.60;
-        };
+        ItemStack armor = player.getItemBySlot(slot);
+        double[] armorPoints = {0};
+        armor.forEachModifier(slot, (attribute, modifier) -> {
+            if (attribute.equals(Attributes.ARMOR) && modifier.operation() == AttributeModifier.Operation.ADD_VALUE) {
+                armorPoints[0] += modifier.amount();
+            }
+        });
+        double condition = armor.isDamageableItem()
+                ? Math.max(0.25, 1.0 - (double) armor.getDamageValue() / armor.getMaxDamage()) : 1.0;
+        double points = source.is(DamageTypeTags.BYPASSES_ARMOR) ? 0 : armorPoints[0];
+        Wound wound = WoundGenerator.roll(cause, event.getNewDamage(), part, points,
+                condition, player.getRandom());
+        if (wound != null) WoundService.add(player, wound);
     }
 
     @SubscribeEvent
