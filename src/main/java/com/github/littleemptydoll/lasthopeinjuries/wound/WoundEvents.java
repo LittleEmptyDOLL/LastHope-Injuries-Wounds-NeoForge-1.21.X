@@ -125,8 +125,9 @@ public final class WoundEvents {
                                     + "/s; wounds: " + state.wounds().size()), false);
                     for (Wound wound : state.wounds()) {
                         context.getSource().sendSuccess(() -> Component.literal(
-                                wound.id() + " " + wound.part() + " " + wound.type()
-                                        + " severity=" + wound.severity()
+                                        wound.id() + " " + wound.part() + " " + wound.type()
+                                        + " severity=" + wound.effectiveSeverity()
+                                        + " healing=" + Math.round(wound.healingProgress()) + "%"
                                         + " infection=" + wound.infection()
                                         + " dressing=" + (wound.dressing() == null ? "none"
                                         : wound.dressing().item() + " clean=" + Math.round(wound.dressing().cleanliness())

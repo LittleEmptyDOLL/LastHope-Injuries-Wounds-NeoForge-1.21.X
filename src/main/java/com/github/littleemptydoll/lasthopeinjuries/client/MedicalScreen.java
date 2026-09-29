@@ -15,7 +15,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -74,11 +73,10 @@ public final class MedicalScreen extends Screen {
         return found;
     }
 
-    private InteractionHand handFor(TagKey<Item> tag) {
-        if (minecraft == null || minecraft.player == null) return null;
-        if (minecraft.player.getMainHandItem().is(tag)) return InteractionHand.MAIN_HAND;
-        if (minecraft.player.getOffhandItem().is(tag)) return InteractionHand.OFF_HAND;
-        return null;
+    private boolean hasItem(TagKey<Item> tag) {
+        if (minecraft == null || minecraft.player == null) return false;
+        return minecraft.player.getOffhandItem().is(tag)
+                || minecraft.player.getInventory().items.stream().anyMatch(stack -> stack.is(tag));
     }
 
     private void treat(int action) {
@@ -90,17 +88,15 @@ public final class MedicalScreen extends Screen {
             default -> null;
         };
         if (tag == null) return;
-        InteractionHand hand = handFor(tag);
-        if (wound != null && hand != null) {
-            PacketDistributor.sendToServer(new WoundNetwork.Treat(
-                    wound.id().toString(), action, hand == InteractionHand.MAIN_HAND ? 0 : 1));
+        if (wound != null && hasItem(tag)) {
+            PacketDistributor.sendToServer(new WoundNetwork.Treat(wound.id().toString(), action));
         }
     }
 
     private void removeDressing() {
         Wound wound = selected();
         if (wound != null && wound.bandaged()) {
-            PacketDistributor.sendToServer(new WoundNetwork.Treat(wound.id().toString(), 2, 0));
+            PacketDistributor.sendToServer(new WoundNetwork.Treat(wound.id().toString(), 2));
         }
     }
 
@@ -115,11 +111,11 @@ public final class MedicalScreen extends Screen {
         bandageButton.setMessage(Component.translatable(wound != null && wound.bandaged()
                 ? "screen.lasthopeinjuries.replace_dressing" : "screen.lasthopeinjuries.bandage"));
         bandageButton.active = wound != null && wound.canBandage()
-                && handFor(TreatmentItems.BANDAGES) != null;
+                && hasItem(TreatmentItems.BANDAGES);
         cleanButton.active = wound != null && !wound.bandaged() && wound.contamination() > 0
-                && handFor(TreatmentItems.ANTISEPTICS) != null;
+                && hasItem(TreatmentItems.ANTISEPTICS);
         antibioticsButton.active = wound != null && wound.infection() > 0
-                && handFor(TreatmentItems.ANTIBIOTICS) != null;
+                && hasItem(TreatmentItems.ANTIBIOTICS);
         removeButton.active = wound != null && wound.bandaged();
     }
 
@@ -173,7 +169,7 @@ public final class MedicalScreen extends Screen {
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.stage." + stage),
                     left + 8, top + 176, wound.infection() >= 50 ? 0xFF8888 : 0xDADADA);
             gui.drawString(font, label("type", wound.type().name()), left + 174, top + 39, 0xFFFFFF);
-            gui.drawString(font, Component.translatable("screen.lasthopeinjuries.severity", wound.severity()),
+            gui.drawString(font, Component.translatable("screen.lasthopeinjuries.severity", wound.effectiveSeverity()),
                     left + 174, top + 58, 0xDADADA);
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.infection", wound.infection()),
                     left + 174, top + 74, 0xDADADA);
@@ -192,6 +188,8 @@ public final class MedicalScreen extends Screen {
             }
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.wound_bleeding",
                     rate(wound.bleedingPerSecond())), left + 174, top + 138, 0xEAA0A0);
+            gui.drawString(font, Component.translatable("screen.lasthopeinjuries.healing",
+                    Math.round(wound.healingProgress())), left + 174, top + 149, 0xAADFAA);
             if (dressing != null) {
                 gui.drawString(font, Component.translatable("screen.lasthopeinjuries.cleanliness",
                         Math.round(dressing.cleanliness())), left + 174, top + 190, 0xDADADA);

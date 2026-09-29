@@ -12,7 +12,6 @@ import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 
@@ -20,7 +19,7 @@ public final class WoundNetwork {
     private WoundNetwork() {}
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("3");
+        var registrar = event.registrar("4");
         registrar.playToClient(Sync.TYPE, Sync.STREAM_CODEC,
                 (payload, context) -> ClientWounds.receive(payload.state(), payload.open()));
         registrar.playToServer(Request.TYPE, Request.STREAM_CODEC, (payload, context) -> {
@@ -32,13 +31,11 @@ public final class WoundNetwork {
             if (!(context.player() instanceof ServerPlayer player)) return;
             try {
                 UUID id = UUID.fromString(payload.id());
-                if (payload.action() < 0 || payload.action() > 3
-                        || payload.hand() < 0 || payload.hand() > 1) return;
+                if (payload.action() < 0 || payload.action() > 3) return;
                 if (payload.action() == 2) {
                     WoundService.removeDressing(player, id);
                 } else {
-                    WoundService.treat(player, id, payload.action(),
-                            payload.hand() == 0 ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
+                    WoundService.treat(player, id, payload.action());
                 }
             } catch (IllegalArgumentException ignored) {
                 // Invalid or obsolete client selection. Never trust packet-supplied wound IDs.
@@ -66,13 +63,12 @@ public final class WoundNetwork {
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 
-    public record Treat(String id, int action, int hand) implements CustomPacketPayload {
+    public record Treat(String id, int action) implements CustomPacketPayload {
         public static final Type<Treat> TYPE = new Type<>(
                 ResourceLocation.fromNamespaceAndPath(LastHopeInjuries.MOD_ID, "treat_wound"));
         public static final StreamCodec<ByteBuf, Treat> STREAM_CODEC = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8, Treat::id,
-                ByteBufCodecs.VAR_INT, Treat::action,
-                ByteBufCodecs.VAR_INT, Treat::hand, Treat::new);
+                ByteBufCodecs.VAR_INT, Treat::action, Treat::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 }

@@ -8,7 +8,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /** Immutable so each change can be persisted with Entity#setData. Age is measured in seconds. */
 public record Wound(UUID id, BodyPart part, WoundType type, int severity, int age,
-                    Dressing dressing, int contamination, int infection) {
+                    Dressing dressing, int contamination, int infection, float healingProgress) {
     public static final Codec<Wound> CODEC = RecordCodecBuilder.create(i -> i.group(
             Codec.STRING.xmap(UUID::fromString, UUID::toString).fieldOf("id").forGetter(Wound::id),
             BodyPart.CODEC.fieldOf("part").forGetter(Wound::part),
@@ -19,14 +19,23 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
             Codec.BOOL.optionalFieldOf("bandaged", false).forGetter(wound -> false),
             Dressing.CODEC.optionalFieldOf("dressing").forGetter(wound -> Optional.ofNullable(wound.dressing())),
             Codec.intRange(0, 100).fieldOf("contamination").forGetter(Wound::contamination),
-            Codec.intRange(0, 100).fieldOf("infection").forGetter(Wound::infection)
-    ).apply(i, (id, part, type, severity, age, oldBandaged, dressing, contamination, infection) ->
+            Codec.intRange(0, 100).fieldOf("infection").forGetter(Wound::infection),
+            Codec.FLOAT.optionalFieldOf("healing_progress", -1.0F).forGetter(Wound::healingProgress)
+    ).apply(i, (id, part, type, severity, age, oldBandaged, dressing, contamination, infection, progress) ->
             new Wound(id, part, type, severity, age,
-                    dressing.orElseGet(() -> oldBandaged ? Dressing.legacy() : null), contamination, infection)));
+                    dressing.orElseGet(() -> oldBandaged ? Dressing.legacy() : null), contamination, infection,
+                    // Approximate existing worlds' age-based healing when the progress field is absent.
+                    progress >= 0 ? progress : Math.min(99.9F,
+                            age * 100.0F / (type.healSeconds() * severity)))));
+
+    public Wound {
+        healingProgress = Float.isFinite(healingProgress)
+                ? Math.max(0, Math.min(100, healingProgress)) : 0;
+    }
 
     public static Wound create(BodyPart part, WoundType type, int severity) {
         return new Wound(UUID.randomUUID(), part, type, Math.max(1, Math.min(5, severity)),
-                0, null, type.contamination(), 0);
+                0, null, type.contamination(), 0, 0);
     }
 
     public Wound bandage() {
@@ -34,7 +43,8 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
     }
 
     public Wound bandage(String item) {
-        return new Wound(id, part, type, severity, age, Dressing.fresh(item), contamination, infection);
+        return new Wound(id, part, type, severity, age, Dressing.fresh(item), contamination, infection,
+                healingProgress);
     }
 
     public boolean canBandage() {
@@ -49,17 +59,17 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
     public Wound removeDressing() {
         int exposedDirt = dressing != null && dressing.cleanliness() < 40
                 ? Math.max(contamination, 40) : contamination;
-        return new Wound(id, part, type, severity, age, null, exposedDirt, infection);
+        return new Wound(id, part, type, severity, age, null, exposedDirt, infection, healingProgress);
     }
 
     public Wound clean() {
         // Washing removes dirt and future exposure risk, but established infection needs medicine.
-        return new Wound(id, part, type, severity, age, dressing, 0, infection);
+        return new Wound(id, part, type, severity, age, dressing, 0, infection, healingProgress);
     }
 
     public Wound antibiotics() {
         return new Wound(id, part, type, severity, age, dressing, contamination,
-                Math.max(0, infection - 40));
+                Math.max(0, infection - 40), healingProgress);
     }
 
     public Wound advance() {
@@ -92,8 +102,20 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
             if (infectionRoll < risk) nextInfection = Math.min(100, infection + 1 + nextContamination / 25);
             else if (nextContamination < 20 && infection < 50) nextInfection = Math.max(0, infection - 1);
         }
+        double bleedingFraction = type.bleed() == 0 ? 0
+                : nextDressing == null ? 1 : 1 - nextDressing.effectiveness(type);
+        float nextHealing = healingProgress;
+        // Healing begins only after bleeding is controlled and established infection is treated.
+        if (bleedingFraction <= 0.25 && nextInfection < 50) {
+            double speed = 1 - bleedingFraction * 0.8;
+            if (nextInfection >= 20) speed *= 0.4;
+            if (nextContamination >= 40) speed *= 0.5;
+            if (nextDressing != null && nextDressing.cleanliness() < 40) speed *= 0.5;
+            nextHealing = (float) Math.min(100, healingProgress
+                    + 100.0 * speed / (type.healSeconds() * severity));
+        }
         return new Wound(id, part, type, severity, age + 1, nextDressing,
-                nextContamination, nextInfection);
+                nextContamination, nextInfection, nextHealing);
     }
 
     public double bleedingPerSecond() {
@@ -101,10 +123,15 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
     }
 
     private double baseBleedingPerSecond() {
-        return type.bleed() * severity / 100.0;
+        return type.bleed() * effectiveSeverity() / 100.0;
+    }
+
+    public int effectiveSeverity() {
+        // The original severity keeps the healing duration stable as the wound improves.
+        return Math.max(1, severity - (int) (healingProgress / 25));
     }
 
     public boolean healed() {
-        return infection < 50 && age >= type.healSeconds() * severity;
+        return healingProgress >= 100;
     }
 }

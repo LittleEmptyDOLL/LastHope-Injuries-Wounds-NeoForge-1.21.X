@@ -98,7 +98,7 @@ public final class WoundGameTests {
         Wound dirtyDressing = new Wound(covered.id(), covered.part(), covered.type(), covered.severity(),
                 covered.age(), new com.github.littleemptydoll.lasthopeinjuries.wound.Dressing(
                         "legendarysurvivaloverhaul:bandage", 20, covered.dressing().saturation()),
-                covered.contamination(), covered.infection());
+                covered.contamination(), covered.infection(), covered.healingProgress());
         Wound exposed = dirtyDressing.removeDressing();
         if (submerged.contamination() <= dry.contamination()
                 || covered.contamination() != deep.contamination()
@@ -121,7 +121,7 @@ public final class WoundGameTests {
             lucky = lucky.advance(4, 1.0);
         }
         Wound established = new Wound(bite.id(), bite.part(), bite.type(), bite.severity(),
-                0, null, 80, 82);
+                0, null, 80, 82, 0);
         Wound washed = established.clean();
         Wound treated = washed.antibiotics();
         if (unlucky.infection() <= 0 || lucky.infection() != 0
@@ -132,5 +132,40 @@ public final class WoundGameTests {
         } else {
             helper.succeed();
         }
+    }
+
+    @GameTest(template = "empty")
+    public static void healingRequiresCareAndPersists(GameTestHelper helper) {
+        Wound cut = Wound.create(BodyPart.LEFT_ARM, WoundType.LACERATION, 2);
+        Wound untreated = cut;
+        Wound treated = cut.bandage();
+        for (int second = 0; second < 150; second++) {
+            untreated = untreated.advance(1, 1.0);
+            treated = treated.advance(1, 1.0);
+        }
+        Wound infected = new Wound(treated.id(), treated.part(), treated.type(), treated.severity(),
+                treated.age(), treated.dressing(), treated.contamination(), 60, treated.healingProgress());
+        Wound infectedNext = infected.advance(1, 1.0);
+        Wound decoded = Wound.CODEC.parse(JsonOps.INSTANCE,
+                Wound.CODEC.encodeStart(JsonOps.INSTANCE, treated).getOrThrow()).getOrThrow();
+        JsonObject legacy = Wound.CODEC.encodeStart(JsonOps.INSTANCE, treated).getOrThrow().getAsJsonObject();
+        legacy.remove("healing_progress");
+        Wound migrated = Wound.CODEC.parse(JsonOps.INSTANCE, legacy).getOrThrow();
+        if (untreated.healingProgress() != 0 || treated.healingProgress() <= 0
+                || infectedNext.healingProgress() != infected.healingProgress()
+                || !treated.equals(decoded) || migrated.healingProgress() <= 0) {
+            helper.fail("Healing progression, stabilization, or legacy migration failed");
+        } else {
+            helper.succeed();
+        }
+    }
+
+    @GameTest(template = "empty")
+    public static void healedWoundEventuallyLeavesState(GameTestHelper helper) {
+        Wound bruise = Wound.create(BodyPart.RIGHT_LEG, WoundType.BRUISE, 1);
+        WoundState state = new WoundState(List.of(bruise), 100);
+        for (int second = 0; second < 200; second++) state = state.advance(1, () -> 1.0);
+        if (!state.wounds().isEmpty()) helper.fail("A stable bruise did not heal");
+        else helper.succeed();
     }
 }

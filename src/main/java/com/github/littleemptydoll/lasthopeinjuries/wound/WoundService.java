@@ -6,7 +6,6 @@ import java.util.UUID;
 import java.util.function.UnaryOperator;
 import com.github.littleemptydoll.lasthopeinjuries.network.WoundNetwork;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.item.Item;
@@ -49,17 +48,29 @@ public final class WoundService {
         return change(player, id, Wound::antibiotics, wound -> wound.infection() > 0);
     }
 
-    /** Called by network handlers; the item, hand and target are checked on the server. */
-    public static boolean treat(ServerPlayer player, UUID id, int action, InteractionHand hand) {
+    /** Called by network handlers; the inventory item and target are checked on the server. */
+    public static boolean treat(ServerPlayer player, UUID id, int action) {
         if (!player.isAlive() || player.isSpectator()) return false;
-        ItemStack stack = player.getItemInHand(hand);
         TagKey<Item> tag = switch (action) {
             case 0 -> TreatmentItems.BANDAGES;
             case 1 -> TreatmentItems.ANTISEPTICS;
             case 3 -> TreatmentItems.ANTIBIOTICS;
             default -> null;
         };
-        if (tag == null || !stack.is(tag)) return false;
+        if (tag == null) return false;
+        // Prefer the selected slot, then the offhand, then the rest of the carried inventory.
+        ItemStack stack = player.getMainHandItem();
+        if (!stack.is(tag)) stack = player.getOffhandItem();
+        if (!stack.is(tag)) {
+            stack = ItemStack.EMPTY;
+            for (ItemStack candidate : player.getInventory().items) {
+                if (candidate.is(tag)) {
+                    stack = candidate;
+                    break;
+                }
+            }
+        }
+        if (stack.isEmpty()) return false;
         String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         boolean changed = switch (action) {
             case 0 -> change(player, id, wound -> wound.bandage(itemId), Wound::canBandage);
