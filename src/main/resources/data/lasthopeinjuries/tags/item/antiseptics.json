@@ -1,4 +1,6 @@
 {
   "replace": false,
-  "values": []
+  "values": [
+    {"id": "legendarysurvivaloverhaul:purified_water_bottle", "required": false}
+  ]
 }

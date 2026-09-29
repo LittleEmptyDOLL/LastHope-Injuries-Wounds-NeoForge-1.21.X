@@ -41,9 +41,10 @@ public record Dressing(String item, float cleanliness, float saturation) {
         return base * remaining * remaining;
     }
 
-    public Dressing advance(double bloodFlow) {
-        float nextSaturation = (float) Math.min(100, saturation + Math.max(0, bloodFlow) * 3.0);
-        float nextCleanliness = Math.max(0, cleanliness - 0.01F - nextSaturation * 0.001F);
+    public Dressing advance(double bloodFlow, int exposure) {
+        // A level-five deep cut now takes several minutes to soak through one dressing.
+        float nextSaturation = (float) Math.min(100, saturation + Math.max(0, bloodFlow) * 0.4);
+        float nextCleanliness = Math.max(0, cleanliness - (0.02F + nextSaturation * 0.001F) * exposure);
         return new Dressing(item, nextCleanliness, nextSaturation);
     }
 }

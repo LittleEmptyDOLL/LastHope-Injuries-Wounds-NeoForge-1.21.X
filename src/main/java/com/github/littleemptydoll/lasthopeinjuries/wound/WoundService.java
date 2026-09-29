@@ -32,8 +32,7 @@ public final class WoundService {
     }
 
     public static boolean bandage(ServerPlayer player, UUID id) {
-        return change(player, id, Wound::bandage, wound -> wound.dressing() == null
-                || !wound.dressing().freshEnough());
+        return change(player, id, Wound::bandage, Wound::canBandage);
     }
 
     public static boolean removeDressing(ServerPlayer player, UUID id) {
@@ -43,7 +42,7 @@ public final class WoundService {
 
     public static boolean clean(ServerPlayer player, UUID id) {
         return change(player, id, Wound::clean,
-                wound -> wound.contamination() > 0 || wound.infection() > 0);
+                wound -> !wound.bandaged() && (wound.contamination() > 0 || wound.infection() > 0));
     }
 
     /** Called by network handlers; the item, hand and target are checked on the server. */
@@ -54,8 +53,7 @@ public final class WoundService {
         if (!stack.is(tag)) return false;
         String itemId = BuiltInRegistries.ITEM.getKey(stack.getItem()).toString();
         boolean changed = bandage
-                ? change(player, id, wound -> wound.bandage(itemId),
-                        wound -> wound.dressing() == null || !wound.dressing().freshEnough())
+                ? change(player, id, wound -> wound.bandage(itemId), Wound::canBandage)
                 : clean(player, id);
         if (changed && !player.getAbilities().instabuild) stack.shrink(1);
         return changed;

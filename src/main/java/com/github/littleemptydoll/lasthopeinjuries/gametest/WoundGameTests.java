@@ -69,4 +69,45 @@ public final class WoundGameTests {
             helper.succeed();
         }
     }
+
+    @GameTest(template = "empty")
+    public static void deepCutDressingSlowsBloodLoss(GameTestHelper helper) {
+        Wound deep = Wound.create(BodyPart.CHEST, WoundType.DEEP_LACERATION, 5);
+        WoundState state = new WoundState(List.of(deep.bandage("legendarysurvivaloverhaul:bandage")), 100);
+        for (int second = 0; second < 120; second++) state = state.advance();
+        Wound remaining = state.wounds().getFirst();
+        if (remaining.dressing().saturation() >= 30 || remaining.dressing().saturation() <= 0
+                || state.bloodLevel() < 75 || remaining.bleedingPerSecond() >= deep.bleedingPerSecond()) {
+            helper.fail("One bandaged deep cut exhausted the blood reserve too quickly");
+        } else {
+            helper.succeed();
+        }
+    }
+
+    @GameTest(template = "empty")
+    public static void wetExposureAndDirtyDressingRequireCleaning(GameTestHelper helper) {
+        Wound deep = Wound.create(BodyPart.LEFT_LEG, WoundType.DEEP_LACERATION, 2);
+        Wound dry = deep;
+        Wound submerged = deep;
+        Wound covered = deep.bandage();
+        for (int second = 0; second < 180; second++) {
+            dry = dry.advance(1);
+            submerged = submerged.advance(4);
+            covered = covered.advance(4);
+        }
+        Wound dirtyDressing = new Wound(covered.id(), covered.part(), covered.type(), covered.severity(),
+                covered.age(), new com.github.littleemptydoll.lasthopeinjuries.wound.Dressing(
+                        "legendarysurvivaloverhaul:bandage", 20, covered.dressing().saturation()),
+                covered.contamination(), covered.infection());
+        Wound exposed = dirtyDressing.removeDressing();
+        if (submerged.contamination() <= dry.contamination()
+                || covered.contamination() != deep.contamination()
+                || covered.dressing().cleanliness() >= 100
+                || dirtyDressing.canBandage() || exposed.canBandage()
+                || exposed.contamination() < 40 || !exposed.clean().canBandage()) {
+            helper.fail("Exposure, dressing protection, or cleaning requirement failed");
+        } else {
+            helper.succeed();
+        }
+    }
 }

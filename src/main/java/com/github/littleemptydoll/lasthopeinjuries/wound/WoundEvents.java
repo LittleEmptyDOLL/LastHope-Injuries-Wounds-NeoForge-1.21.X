@@ -87,7 +87,9 @@ public final class WoundEvents {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.tickCount % 20 != 0) return;
         WoundState before = WoundService.get(player);
         if (before.wounds().isEmpty() && before.bloodLevel() >= 100) return;
-        WoundState after = before.advance();
+        int exposure = player.isInWater() ? 4
+                : player.level().isRainingAt(player.blockPosition()) ? 2 : 1;
+        WoundState after = before.advance(exposure);
         WoundService.set(player, after);
         // Severe depletion is harmful even after the bleeding has stopped.
         if (after.bloodLevel() <= 15 && player.tickCount % 100 == 0) {

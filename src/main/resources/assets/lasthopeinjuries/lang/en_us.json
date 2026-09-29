@@ -23,6 +23,7 @@
   "screen.lasthopeinjuries.bandaged": "Bandaged: %s",
   "screen.lasthopeinjuries.lso_health": "LSO: %s%%",
   "screen.lasthopeinjuries.hold_item": "Hold a treatment item in either hand",
+  "screen.lasthopeinjuries.clean_first": "Remove the dressing and clean the wound first",
   "part.lasthopeinjuries.head": "Head",
   "part.lasthopeinjuries.chest": "Chest",
   "part.lasthopeinjuries.left_arm": "Left arm",

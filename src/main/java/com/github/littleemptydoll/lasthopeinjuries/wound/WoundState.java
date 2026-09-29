@@ -28,7 +28,11 @@ public record WoundState(List<Wound> wounds, float bloodLevel) {
     }
 
     public WoundState advance() {
-        List<Wound> next = wounds.stream().map(Wound::advance).filter(w -> !w.healed()).toList();
+        return advance(1);
+    }
+
+    public WoundState advance(int exposure) {
+        List<Wound> next = wounds.stream().map(w -> w.advance(exposure)).filter(w -> !w.healed()).toList();
         double bleeding = next.stream().mapToDouble(Wound::bleedingPerSecond).sum();
         // A stopped bleed leaves the reserve depleted; blood then recovers slowly over time.
         float level = (float) (bloodLevel - bleeding + (bleeding == 0 ? 0.08 : 0));

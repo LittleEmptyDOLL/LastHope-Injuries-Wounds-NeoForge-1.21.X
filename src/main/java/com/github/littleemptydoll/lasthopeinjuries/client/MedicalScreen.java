@@ -103,10 +103,10 @@ public final class MedicalScreen extends Screen {
         nextButton.active = (page + 1) * ROWS < count;
         bandageButton.setMessage(Component.translatable(wound != null && wound.bandaged()
                 ? "screen.lasthopeinjuries.replace_dressing" : "screen.lasthopeinjuries.bandage"));
-        bandageButton.active = wound != null
-                && (wound.dressing() == null || !wound.dressing().freshEnough())
+        bandageButton.active = wound != null && wound.canBandage()
                 && handFor(TreatmentItems.BANDAGES) != null;
-        cleanButton.active = wound != null && (wound.contamination() > 0 || wound.infection() > 0)
+        cleanButton.active = wound != null && !wound.bandaged()
+                && (wound.contamination() > 0 || wound.infection() > 0)
                 && handFor(TreatmentItems.ANTISEPTICS) != null;
         removeButton.active = wound != null && wound.bandaged();
     }
@@ -182,7 +182,8 @@ public final class MedicalScreen extends Screen {
                         Math.round(dressing.saturation())), left + 174, top + 204, 0xDADADA);
             }
         }
-        gui.drawString(font, Component.translatable("screen.lasthopeinjuries.hold_item"),
+        gui.drawString(font, Component.translatable(wound != null && wound.contamination() >= 40
+                ? "screen.lasthopeinjuries.clean_first" : "screen.lasthopeinjuries.hold_item"),
                 left + 9, top + 225, 0xAAB2BD);
         super.render(gui, mouseX, mouseY, partialTick);
     }

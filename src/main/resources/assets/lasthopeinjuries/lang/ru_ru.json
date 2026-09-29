@@ -23,6 +23,7 @@
   "screen.lasthopeinjuries.bandaged": "Перевязано: %s",
   "screen.lasthopeinjuries.lso_health": "LSO: %s%%",
   "screen.lasthopeinjuries.hold_item": "Держите лечебный предмет в руке",
+  "screen.lasthopeinjuries.clean_first": "Снимите повязку и очистите рану",
   "part.lasthopeinjuries.head": "Голова",
   "part.lasthopeinjuries.chest": "Грудь",
   "part.lasthopeinjuries.left_arm": "Левая рука",

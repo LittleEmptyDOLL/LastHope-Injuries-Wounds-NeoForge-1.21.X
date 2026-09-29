@@ -36,12 +36,19 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
         return new Wound(id, part, type, severity, age, Dressing.fresh(item), contamination, infection);
     }
 
+    public boolean canBandage() {
+        return contamination < 40 && (dressing == null ||
+                (!dressing.freshEnough() && dressing.cleanliness() >= 40));
+    }
+
     public boolean bandaged() {
         return dressing != null;
     }
 
     public Wound removeDressing() {
-        return new Wound(id, part, type, severity, age, null, contamination, infection);
+        int exposedDirt = dressing != null && dressing.cleanliness() < 40
+                ? Math.max(contamination, 40) : contamination;
+        return new Wound(id, part, type, severity, age, null, exposedDirt, infection);
     }
 
     public Wound clean() {
@@ -49,14 +56,20 @@ public record Wound(UUID id, BodyPart part, WoundType type, int severity, int ag
     }
 
     public Wound advance() {
+        return advance(1);
+    }
+
+    /** Exposure is 1 in dry conditions, 2 in rain and 4 when submerged. */
+    public Wound advance(int exposure) {
         int nextContamination = contamination;
-        Dressing nextDressing = dressing == null ? null : dressing.advance(baseBleedingPerSecond());
+        Dressing nextDressing = dressing == null ? null : dressing.advance(baseBleedingPerSecond(), exposure);
         // Clean dressings protect the wound; saturated or dirty ones need replacing.
         if ((age + 1) % 30 == 0 && type != WoundType.BRUISE) {
             if (nextDressing == null || nextDressing.saturation() >= 100) {
-                nextContamination = Math.min(100, nextContamination + 1);
+                nextContamination = Math.min(100, nextContamination + exposure
+                        + (type == WoundType.BITE || type == WoundType.PUNCTURE ? 1 : 0));
             } else if (nextDressing.cleanliness() < 40) {
-                nextContamination = Math.min(100, nextContamination + 2);
+                nextContamination = Math.min(100, nextContamination + 2 * exposure);
             }
         }
         int nextInfection = infection;
