@@ -1,6 +1,7 @@
 package com.github.littleemptydoll.lasthopeinjuries.gametest;
 
 import com.github.littleemptydoll.lasthopeinjuries.LastHopeInjuries;
+import com.github.littleemptydoll.lasthopeinjuries.moodle.MoodleState;
 import com.github.littleemptydoll.lasthopeinjuries.wound.BodyPart;
 import com.github.littleemptydoll.lasthopeinjuries.wound.Wound;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundState;
@@ -167,5 +168,35 @@ public final class WoundGameTests {
         for (int second = 0; second < 200; second++) state = state.advance(1, () -> 1.0);
         if (!state.wounds().isEmpty()) helper.fail("A stable bruise did not heal");
         else helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void moodlesSeparateBleedingAndPriorBloodLoss(GameTestHelper helper) {
+        Wound wound = Wound.create(BodyPart.LEFT_ARM, WoundType.LACERATION, 3).bandage();
+        MoodleState moodles = MoodleState.from(new WoundState(List.of(wound), 55));
+        if (moodles.bleeding() != 0 || moodles.bloodLoss() != 1
+                || moodles.pain() == 0 || moodles.sickness() != 0) {
+            helper.fail("A closed bleed erased the remaining blood loss or pain");
+        } else {
+            helper.succeed();
+        }
+    }
+
+    @GameTest(template = "empty")
+    public static void moodlesCombineSmallWoundsAndTrackSevereInfection(GameTestHelper helper) {
+        Wound a = Wound.create(BodyPart.LEFT_ARM, WoundType.SCRATCH, 1);
+        Wound b = Wound.create(BodyPart.RIGHT_ARM, WoundType.SCRATCH, 1);
+        Wound c = Wound.create(BodyPart.LEFT_LEG, WoundType.SCRATCH, 1);
+        MoodleState small = MoodleState.from(new WoundState(List.of(a, b, c), 29));
+        Wound infected = new Wound(a.id(), a.part(), a.type(), a.severity(), a.age(),
+                a.dressing(), a.contamination(), 85, a.healingProgress());
+        MoodleState sick = MoodleState.from(new WoundState(List.of(infected), 100));
+        if (small.pain() != 2 || small.bloodLoss() != 3
+                || Math.abs(small.outgoingDamageMultiplier() - 0.54F) > 0.001F
+                || sick.sickness() != 3 || MoodleState.from(WoundState.empty()).pain() != 0) {
+            helper.fail("Pain aggregation, blood loss penalty, or infection moodle failed");
+        } else {
+            helper.succeed();
+        }
     }
 }

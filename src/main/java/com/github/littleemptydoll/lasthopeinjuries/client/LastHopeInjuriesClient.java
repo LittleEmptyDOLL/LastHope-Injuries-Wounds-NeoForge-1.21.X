@@ -27,7 +27,7 @@ public final class LastHopeInjuriesClient {
 
     public LastHopeInjuriesClient(IEventBus modBus) {
         modBus.addListener(this::registerKeys);
-        modBus.addListener(BloodHud::register);
+        modBus.addListener(MoodleHud::register);
         NeoForge.EVENT_BUS.register(this);
     }
 

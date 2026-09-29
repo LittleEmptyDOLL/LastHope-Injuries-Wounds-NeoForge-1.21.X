@@ -5,6 +5,7 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import java.util.UUID;
 import com.github.littleemptydoll.lasthopeinjuries.LastHopeInjuries;
 import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoWoundBridge;
+import com.github.littleemptydoll.lasthopeinjuries.moodle.MoodleState;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
@@ -107,9 +108,8 @@ public final class WoundEvents {
     @SubscribeEvent
     public static void onOutgoingDamage(LivingDamageEvent.Pre event) {
         if (!(event.getSource().getEntity() instanceof ServerPlayer attacker)) return;
-        float level = WoundService.get(attacker).bloodLevel();
-        if (level < 30) event.setNewDamage(event.getNewDamage() * 0.6F);
-        else if (level < 60) event.setNewDamage(event.getNewDamage() * 0.8F);
+        float factor = MoodleState.from(WoundService.get(attacker)).outgoingDamageMultiplier();
+        if (factor < 1) event.setNewDamage(event.getNewDamage() * factor);
     }
 
     @SubscribeEvent
