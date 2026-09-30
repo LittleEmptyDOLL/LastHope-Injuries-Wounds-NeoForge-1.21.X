@@ -1,6 +1,7 @@
 package com.github.littleemptydoll.lasthopeinjuries.moodle;
 
 import com.github.littleemptydoll.lasthopeinjuries.network.WoundNetwork;
+import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoRecoveryBridge;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundService;
 import java.util.HashMap;
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.UUID;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.monster.Monster;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -36,7 +38,9 @@ public final class PsycheEvents {
         }
         int hostiles = player.level().getEntitiesOfClass(Monster.class,
                 player.getBoundingBox().inflate(10), monster -> monster.isAlive()).size();
-        PsycheState state = get(player).advance(MoodleState.from(WoundService.get(player)),
+        boolean painkiller = ModList.get().isLoaded("legendarysurvivaloverhaul")
+                && LsoRecoveryBridge.painSuppressed(player);
+        PsycheState state = get(player).advance(MoodleState.from(WoundService.get(player), painkiller),
                 hostiles, player.isSleeping());
         STATES.put(player.getUUID(), state);
         // Small independent packet: movement and hostile proximity change without wound updates.
