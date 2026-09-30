@@ -5,6 +5,7 @@ import com.github.littleemptydoll.lasthopeinjuries.wound.WoundStorage;
 import com.github.littleemptydoll.lasthopeinjuries.wound.MedicalItems;
 import com.github.littleemptydoll.lasthopeinjuries.network.WoundNetwork;
 import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoWoundBridge;
+import com.github.littleemptydoll.lasthopeinjuries.moodle.PsycheEvents;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.ModList;
@@ -19,6 +20,7 @@ public final class LastHopeInjuries {
         MedicalItems.ITEMS.register(modBus);
         modBus.addListener(WoundNetwork::register);
         NeoForge.EVENT_BUS.register(WoundEvents.class);
+        NeoForge.EVENT_BUS.register(PsycheEvents.class);
         if (ModList.get().isLoaded("legendarysurvivaloverhaul")) {
             NeoForge.EVENT_BUS.register(LsoWoundBridge.class);
         }

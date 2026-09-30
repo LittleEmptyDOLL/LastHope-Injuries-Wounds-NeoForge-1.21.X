@@ -7,6 +7,8 @@ import com.github.littleemptydoll.lasthopeinjuries.LastHopeInjuries;
 import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoWoundBridge;
 import com.github.littleemptydoll.lasthopeinjuries.compat.lso.LsoRecoveryBridge;
 import com.github.littleemptydoll.lasthopeinjuries.moodle.MoodleState;
+import com.github.littleemptydoll.lasthopeinjuries.moodle.PsycheEvents;
+import com.github.littleemptydoll.lasthopeinjuries.moodle.PsycheState;
 import net.minecraft.stats.Stats;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
@@ -45,6 +47,7 @@ public final class WoundEvents {
         // These damage types are physiological/environmental, and bleeding must not create another wound.
         if (source.is(BLEEDING) || source.is(WOUND_INFECTION)
                 || source.is(DamageTypeTags.BYPASSES_INVULNERABILITY)) return;
+        PsycheEvents.recordHit(player, event.getNewDamage());
 
         WoundGenerator.Cause cause = WoundGenerator.cause(source);
         if (cause == null) return;
@@ -97,6 +100,7 @@ public final class WoundEvents {
         boolean painkiller = ModList.get().isLoaded("legendarysurvivaloverhaul")
                 && LsoRecoveryBridge.painSuppressed(attacker);
         float factor = MoodleState.from(WoundService.get(attacker), painkiller).outgoingDamageMultiplier();
+        factor *= PsycheState.damageMultiplier(PsycheEvents.get(attacker).panicLevel());
         if (factor < 1) event.setNewDamage(event.getNewDamage() * factor);
     }
 

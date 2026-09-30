@@ -2,6 +2,7 @@ package com.github.littleemptydoll.lasthopeinjuries.network;
 
 import com.github.littleemptydoll.lasthopeinjuries.LastHopeInjuries;
 import com.github.littleemptydoll.lasthopeinjuries.client.ClientWounds;
+import com.github.littleemptydoll.lasthopeinjuries.client.ClientPsyche;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundService;
 import com.github.littleemptydoll.lasthopeinjuries.wound.WoundState;
 import io.netty.buffer.ByteBuf;
@@ -19,9 +20,11 @@ public final class WoundNetwork {
     private WoundNetwork() {}
 
     public static void register(RegisterPayloadHandlersEvent event) {
-        var registrar = event.registrar("5");
+        var registrar = event.registrar("6");
         registrar.playToClient(Sync.TYPE, Sync.STREAM_CODEC,
                 (payload, context) -> ClientWounds.receive(payload.state(), payload.open()));
+        registrar.playToClient(PsycheSync.TYPE, PsycheSync.STREAM_CODEC,
+                (payload, context) -> ClientPsyche.receive(payload.stress(), payload.panic()));
         registrar.playToServer(Request.TYPE, Request.STREAM_CODEC, (payload, context) -> {
             if (context.player() instanceof ServerPlayer player) {
                 sync(player, WoundService.get(player), true);
@@ -69,6 +72,15 @@ public final class WoundNetwork {
         public static final StreamCodec<ByteBuf, Treat> STREAM_CODEC = StreamCodec.composite(
                 ByteBufCodecs.STRING_UTF8, Treat::id,
                 ByteBufCodecs.VAR_INT, Treat::action, Treat::new);
+        @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
+    }
+
+    public record PsycheSync(int stress, int panic) implements CustomPacketPayload {
+        public static final Type<PsycheSync> TYPE = new Type<>(
+                ResourceLocation.fromNamespaceAndPath(LastHopeInjuries.MOD_ID, "sync_psyche"));
+        public static final StreamCodec<ByteBuf, PsycheSync> STREAM_CODEC = StreamCodec.composite(
+                ByteBufCodecs.VAR_INT, PsycheSync::stress,
+                ByteBufCodecs.VAR_INT, PsycheSync::panic, PsycheSync::new);
         @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
     }
 }

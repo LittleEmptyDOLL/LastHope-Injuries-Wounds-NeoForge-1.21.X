@@ -2,6 +2,7 @@ package com.github.littleemptydoll.lasthopeinjuries.gametest;
 
 import com.github.littleemptydoll.lasthopeinjuries.LastHopeInjuries;
 import com.github.littleemptydoll.lasthopeinjuries.moodle.MoodleState;
+import com.github.littleemptydoll.lasthopeinjuries.moodle.PsycheState;
 import com.github.littleemptydoll.lasthopeinjuries.wound.BodyPart;
 import com.github.littleemptydoll.lasthopeinjuries.wound.RecoveryModifier;
 import com.github.littleemptydoll.lasthopeinjuries.wound.Wound;
@@ -21,6 +22,49 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class WoundGameTests {
     private WoundGameTests() {}
+
+    @GameTest(template = "empty")
+    public static void dangerAndSeriousInjuriesCauseTemporaryStress(GameTestHelper helper) {
+        MoodleState healthy = MoodleState.from(WoundState.empty());
+        MoodleState minor = MoodleState.from(new WoundState(List.of(
+                Wound.create(BodyPart.LEFT_ARM, WoundType.SCRATCH, 1)), 100));
+        MoodleState serious = MoodleState.from(new WoundState(List.of(
+                Wound.create(BodyPart.CHEST, WoundType.DEEP_LACERATION, 5)), 32));
+        PsycheState calm = PsycheState.CALM;
+        PsycheState smallWound = calm;
+        PsycheState besieged = calm;
+        PsycheState injured = calm;
+        for (int second = 0; second < 20; second++) {
+            calm = calm.advance(healthy, 1, false);
+            smallWound = smallWound.advance(minor, 0, false);
+            besieged = besieged.advance(healthy, 9, false);
+            injured = injured.advance(serious, 0, false);
+        }
+        if (calm.stressLevel() != 0 || calm.panicLevel() != 0 || smallWound.stressLevel() != 0
+                || besieged.stressLevel() < 2 || besieged.panicLevel() < 2
+                || injured.stressLevel() == 0 || injured.panicLevel() != 0) {
+            helper.fail("Minor wounds caused panic, or serious injury and a crowd had no effect");
+            return;
+        }
+        for (int second = 0; second < 50; second++) besieged = besieged.advance(healthy, 0, true);
+        if (besieged.stressLevel() != 0 || besieged.panicLevel() != 0) {
+            helper.fail("Stress or panic persisted after rest in safety");
+        } else helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void suddenDamageCausesShortPanicWithoutLargeCombatPenalty(GameTestHelper helper) {
+        PsycheState state = PsycheState.CALM.hit(9);
+        if (state.panicLevel() < 1 || PsycheState.CALM.hit(2).panicLevel() != 0
+                || PsycheState.damageMultiplier(4) < 0.8F) {
+            helper.fail("A heavy blow failed to trigger mild panic, or its penalty was excessive");
+            return;
+        }
+        MoodleState healthy = MoodleState.from(WoundState.empty());
+        for (int second = 0; second < 12; second++) state = state.advance(healthy, 0, false);
+        if (state.panicLevel() != 0) helper.fail("Panic from a single blow did not fade");
+        else helper.succeed();
+    }
 
     @GameTest(template = "empty")
     public static void hitLocationAndCauseRespectPhysicalDamage(GameTestHelper helper) {

@@ -20,18 +20,20 @@ import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.neoforged.fml.ModList;
 
-/** Initial medical view: one selected wound and a server-validated action using a held item. */
+/** Medical view: select a wound on the left and treat it from the right panel. */
 public final class MedicalScreen extends Screen {
-    private static final int ROWS = 5;
-    private static final int PANEL_HEIGHT = 242;
+    private static final int ROWS = 7;
+    private static final int PANEL_WIDTH = 390;
+    private static final int PANEL_HEIGHT = 260;
     private UUID selectedId;
     private int page;
-    private boolean extraTreatments;
     private Button bandageButton;
     private Button cleanButton;
     private Button antibioticsButton;
-    private Button moreButton;
     private Button removeButton;
+    private Button medkitButton;
+    private Button herbsButton;
+    private Button sutureButton;
     private Button previousButton;
     private Button nextButton;
 
@@ -42,28 +44,33 @@ public final class MedicalScreen extends Screen {
     @Override
     protected void init() {
         super.init();
-        int left = (width - 320) / 2;
+        int left = (width - PANEL_WIDTH) / 2;
         int top = (height - PANEL_HEIGHT) / 2;
         previousButton = addRenderableWidget(Button.builder(Component.literal("<"),
-                b -> page = Math.max(0, page - 1)).bounds(left + 8, top + 151, 20, 20).build());
+                b -> page = Math.max(0, page - 1)).bounds(left + 8, top + 197, 20, 20).build());
         nextButton = addRenderableWidget(Button.builder(Component.literal(">"),
-                b -> page++).bounds(left + 135, top + 151, 20, 20).build());
+                b -> page++).bounds(left + 155, top + 197, 20, 20).build());
         bandageButton = addRenderableWidget(Button.builder(
                 Component.translatable("screen.lasthopeinjuries.bandage"),
-                b -> treat(extraTreatments ? 4 : 0)).bounds(left + 169, top + 160, 68, 20).build());
+                b -> treat(0)).bounds(left + 194, top + 170, 92, 20).build());
         cleanButton = addRenderableWidget(Button.builder(
                 Component.translatable("screen.lasthopeinjuries.clean"),
-                b -> treat(extraTreatments ? 5 : 1)).bounds(left + 240, top + 160, 68, 20).build());
+                b -> treat(1)).bounds(left + 290, top + 170, 92, 20).build());
         removeButton = addRenderableWidget(Button.builder(
                 Component.translatable("screen.lasthopeinjuries.remove_dressing"),
-                b -> { if (extraTreatments) treat(6); else removeDressing(); })
-                .bounds(left + 8, top + 190, 86, 20).build());
+                b -> removeDressing()).bounds(left + 194, top + 192, 92, 20).build());
         antibioticsButton = addRenderableWidget(Button.builder(
                 Component.translatable("screen.lasthopeinjuries.antibiotics"),
-                b -> treat(3)).bounds(left + 8, top + 214, 86, 20).build());
-        moreButton = addRenderableWidget(Button.builder(
-                Component.translatable("screen.lasthopeinjuries.more"),
-                b -> extraTreatments = !extraTreatments).bounds(left + 99, top + 214, 58, 20).build());
+                b -> treat(3)).bounds(left + 194, top + 236, 188, 20).build());
+        medkitButton = addRenderableWidget(Button.builder(
+                Component.translatable("screen.lasthopeinjuries.medkit"),
+                b -> treat(4)).bounds(left + 194, top + 214, 92, 20).build());
+        herbsButton = addRenderableWidget(Button.builder(
+                Component.translatable("screen.lasthopeinjuries.herbs"),
+                b -> treat(5)).bounds(left + 290, top + 214, 92, 20).build());
+        sutureButton = addRenderableWidget(Button.builder(
+                Component.translatable("screen.lasthopeinjuries.suture"),
+                b -> treat(6)).bounds(left + 290, top + 192, 92, 20).build());
     }
 
     private Wound selected() {
@@ -117,36 +124,27 @@ public final class MedicalScreen extends Screen {
         page = Math.min(page, Math.max(0, (count - 1) / ROWS));
         previousButton.active = page > 0;
         nextButton.active = (page + 1) * ROWS < count;
-        bandageButton.setMessage(Component.translatable(extraTreatments ? "screen.lasthopeinjuries.medkit"
-                : wound != null && wound.bandaged()
+        bandageButton.setMessage(Component.translatable(wound != null && wound.bandaged()
                 ? "screen.lasthopeinjuries.replace_dressing" : "screen.lasthopeinjuries.bandage"));
-        bandageButton.active = wound != null && (extraTreatments
-                ? wound.canMedkit() && hasItem(TreatmentItems.MEDKITS)
-                : wound.canBandage() && hasItem(TreatmentItems.BANDAGES));
-        cleanButton.setMessage(Component.translatable(extraTreatments
-                ? "screen.lasthopeinjuries.herbs" : "screen.lasthopeinjuries.clean"));
-        cleanButton.active = wound != null && (extraTreatments
-                ? wound.canUseHerbs() && minecraft != null && minecraft.player != null
-                        && minecraft.player.getFoodData().getFoodLevel() > 3
-                        && hasItem(TreatmentItems.HERBS)
-                : !wound.bandaged() && wound.contamination() > 0
-                        && hasItem(TreatmentItems.ANTISEPTICS));
+        bandageButton.active = wound != null && wound.canBandage() && hasItem(TreatmentItems.BANDAGES);
+        cleanButton.active = wound != null && !wound.bandaged() && wound.contamination() > 0
+                && hasItem(TreatmentItems.ANTISEPTICS);
         antibioticsButton.active = wound != null && wound.infection() > 0
                 && hasItem(TreatmentItems.ANTIBIOTICS);
-        removeButton.setMessage(Component.translatable(extraTreatments
-                ? "screen.lasthopeinjuries.suture" : "screen.lasthopeinjuries.remove_dressing"));
-        removeButton.active = wound != null && (extraTreatments
-                ? wound.canSuture() && hasItem(TreatmentItems.SUTURES) : wound.bandaged());
-        moreButton.setMessage(Component.translatable(extraTreatments
-                ? "screen.lasthopeinjuries.back" : "screen.lasthopeinjuries.more"));
+        removeButton.active = wound != null && wound.bandaged();
+        medkitButton.active = wound != null && wound.canMedkit() && hasItem(TreatmentItems.MEDKITS);
+        herbsButton.active = wound != null && wound.canUseHerbs() && minecraft != null
+                && minecraft.player != null && minecraft.player.getFoodData().getFoodLevel() > 3
+                && hasItem(TreatmentItems.HERBS);
+        sutureButton.active = wound != null && wound.canSuture() && hasItem(TreatmentItems.SUTURES);
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (super.mouseClicked(mouseX, mouseY, button)) return true;
-        int left = (width - 320) / 2;
+        int left = (width - PANEL_WIDTH) / 2;
         int top = (height - PANEL_HEIGHT) / 2;
-        if (button == 0 && mouseX >= left + 8 && mouseX < left + 157
+        if (button == 0 && mouseX >= left + 8 && mouseX < left + 178
                 && mouseY >= top + 35 && mouseY < top + 35 + ROWS * 22) {
             int index = page * ROWS + ((int) mouseY - top - 35) / 22;
             var wounds = ClientWounds.state().wounds();
@@ -160,22 +158,22 @@ public final class MedicalScreen extends Screen {
 
     @Override
     public void render(GuiGraphics gui, int mouseX, int mouseY, float partialTick) {
-        int left = (width - 320) / 2;
+        int left = (width - PANEL_WIDTH) / 2;
         int top = (height - PANEL_HEIGHT) / 2;
-        gui.fill(left, top, left + 320, top + PANEL_HEIGHT, 0xDD151B22);
-        gui.fill(left + 163, top + 27, left + 164, top + 181, 0xFF58606A);
+        gui.fill(left, top, left + PANEL_WIDTH, top + PANEL_HEIGHT, 0xDD151B22);
+        gui.fill(left + 185, top + 27, left + 186, top + 256, 0xFF58606A);
         gui.drawString(font, title, left + 9, top + 8, 0xFFFFFF);
         WoundState state = ClientWounds.state();
         gui.drawString(font, Component.translatable("screen.lasthopeinjuries.blood_level",
-                Math.round(state.bloodLevel())), left + 190, top + 8, 0xEAA0A0);
+                Math.round(state.bloodLevel())), left + 278, top + 8, 0xEAA0A0);
         gui.drawString(font, Component.translatable("screen.lasthopeinjuries.bleeding_rate",
-                rate(state.bleedingRate())), left + 174, top + 23, 0xEAA0A0);
+                rate(state.bleedingRate())), left + 194, top + 23, 0xEAA0A0);
 
         int start = page * ROWS;
         for (int row = 0; row < ROWS && start + row < state.wounds().size(); row++) {
             Wound wound = state.wounds().get(start + row);
             int y = top + 35 + row * 22;
-            gui.fill(left + 8, y, left + 157, y + 19,
+            gui.fill(left + 8, y, left + 178, y + 19,
                     wound.id().equals(selectedId) ? 0xFF586B72 : 0xFF303840);
             gui.drawString(font, label("part", wound.part().name()), left + 12, y + 1, 0xFFFFFF);
             gui.drawString(font, label("type", wound.type().name()), left + 12, y + 10, 0xBFC8D0);
@@ -183,40 +181,40 @@ public final class MedicalScreen extends Screen {
         Wound wound = selected();
         if (wound == null) {
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.no_wounds"),
-                    left + 180, top + 45, 0xCACACA);
+                    left + 194, top + 45, 0xCACACA);
         } else {
             String stage = wound.infection() >= 80 ? "severe" : wound.infection() >= 50 ? "infected"
                     : wound.infection() >= 20 ? "inflamed" : wound.infection() > 0
                     || wound.contamination() >= 40 ? "at_risk" : "clean";
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.stage." + stage),
-                    left + 8, top + 176, wound.infection() >= 50 ? 0xFF8888 : 0xDADADA);
-            gui.drawString(font, label("type", wound.type().name()), left + 174, top + 39, 0xFFFFFF);
+                    left + 8, top + 230, wound.infection() >= 50 ? 0xFF8888 : 0xDADADA);
+            gui.drawString(font, label("type", wound.type().name()), left + 194, top + 36, 0xFFFFFF);
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.severity", wound.effectiveSeverity()),
-                    left + 174, top + 58, 0xDADADA);
+                    left + 194, top + 48, 0xDADADA);
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.infection", wound.infection()),
-                    left + 174, top + 74, 0xDADADA);
+                    left + 194, top + 60, 0xDADADA);
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.contamination",
-                    wound.contamination()), left + 174, top + 90, 0xDADADA);
+                    wound.contamination()), left + 194, top + 72, 0xDADADA);
             Dressing dressing = wound.dressing();
             Component itemName = dressing == null ? Component.translatable("screen.lasthopeinjuries.no_dressing")
                     : dressingName(dressing.item());
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.dressing", itemName),
-                    left + 174, top + 106, 0xDADADA);
+                    left + 194, top + 84, 0xDADADA);
             if (ModList.get().isLoaded("legendarysurvivaloverhaul") && minecraft != null
                     && minecraft.player != null) {
                 int health = Math.round(100 * LsoWoundBridge.healthRatio(minecraft.player, wound.part()));
                 gui.drawString(font, Component.translatable("screen.lasthopeinjuries.lso_health", health),
-                        left + 174, top + 122, 0xDADADA);
+                        left + 194, top + 96, 0xDADADA);
             }
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.wound_bleeding",
-                    rate(wound.bleedingPerSecond())), left + 174, top + 138, 0xEAA0A0);
+                    rate(wound.bleedingPerSecond())), left + 194, top + 108, 0xEAA0A0);
             gui.drawString(font, Component.translatable("screen.lasthopeinjuries.healing",
-                    Math.round(wound.healingProgress())), left + 174, top + 149, 0xAADFAA);
+                    Math.round(wound.healingProgress())), left + 194, top + 120, 0xAADFAA);
             if (dressing != null) {
                 gui.drawString(font, Component.translatable("screen.lasthopeinjuries.cleanliness",
-                        Math.round(dressing.cleanliness())), left + 174, top + 190, 0xDADADA);
+                        Math.round(dressing.cleanliness())), left + 194, top + 132, 0xDADADA);
                 gui.drawString(font, Component.translatable("screen.lasthopeinjuries.saturation",
-                        Math.round(dressing.saturation())), left + 174, top + 204, 0xDADADA);
+                        Math.round(dressing.saturation())), left + 194, top + 144, 0xDADADA);
             }
         }
         Component status = wound == null ? Component.translatable("screen.lasthopeinjuries.hold_item")
@@ -228,7 +226,7 @@ public final class MedicalScreen extends Screen {
                 : wound.stabilized() ? "screen.lasthopeinjuries.stabilized"
                 : "screen.lasthopeinjuries.active_bleeding");
         gui.drawString(font, status,
-                left + 174, top + 225, 0xAAB2BD);
+                left + 194, top + 157, 0xAAB2BD);
         super.render(gui, mouseX, mouseY, partialTick);
     }
 

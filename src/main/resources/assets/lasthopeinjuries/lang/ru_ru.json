@@ -13,6 +13,8 @@
   "hud.lasthopeinjuries.blood_loss": "Кровопотеря %s (%s%%)",
   "hud.lasthopeinjuries.pain": "Боль %s",
   "hud.lasthopeinjuries.sickness": "Недомогание %s",
+  "hud.lasthopeinjuries.stress": "Стресс %s",
+  "hud.lasthopeinjuries.panic": "Паника %s",
   "screen.lasthopeinjuries.no_wounds": "Ран нет",
   "screen.lasthopeinjuries.bandage": "Перевязать",
   "screen.lasthopeinjuries.replace_dressing": "Заменить",

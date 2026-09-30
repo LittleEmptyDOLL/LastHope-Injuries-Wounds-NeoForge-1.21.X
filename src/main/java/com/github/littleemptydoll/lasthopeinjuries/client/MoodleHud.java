@@ -47,6 +47,18 @@ public final class MoodleHud {
             gui.drawString(minecraft.font, label, x + 6, y + 3, color);
             y += 17;
         }
+        y = renderPsyche(gui, minecraft, x, y, "stress", ClientPsyche.stress(), 0xFFE5BA77);
+        renderPsyche(gui, minecraft, x, y, "panic", ClientPsyche.panic(), 0xFFFF8D69);
+    }
+
+    private static int renderPsyche(GuiGraphics gui, Minecraft minecraft, int x, int y,
+                                    String name, int level, int color) {
+        if (level == 0) return y;
+        Component label = Component.translatable("hud.lasthopeinjuries." + name, NUMERALS[level]);
+        gui.fill(x, y, x + 163, y + 15, 0xBB151B22);
+        gui.fill(x, y, x + 2, y + 15, color);
+        gui.drawString(minecraft.font, label, x + 6, y + 3, color);
+        return y + 17;
     }
 
     private static int color(MoodleType type, int level) {

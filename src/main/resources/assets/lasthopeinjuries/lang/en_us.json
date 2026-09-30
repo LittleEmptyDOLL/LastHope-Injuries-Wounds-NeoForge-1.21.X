@@ -13,6 +13,8 @@
   "hud.lasthopeinjuries.blood_loss": "Blood loss %s (%s%%)",
   "hud.lasthopeinjuries.pain": "Pain %s",
   "hud.lasthopeinjuries.sickness": "Sickness %s",
+  "hud.lasthopeinjuries.stress": "Stress %s",
+  "hud.lasthopeinjuries.panic": "Panic %s",
   "screen.lasthopeinjuries.no_wounds": "No wounds",
   "screen.lasthopeinjuries.bandage": "Bandage",
   "screen.lasthopeinjuries.replace_dressing": "Replace",

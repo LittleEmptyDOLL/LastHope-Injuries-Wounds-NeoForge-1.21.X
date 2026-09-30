@@ -43,6 +43,7 @@ public final class LastHopeInjuriesClient {
     public void tick(ClientTickEvent.Post event) {
         if (Minecraft.getInstance().player == null) {
             ClientWounds.reset();
+            ClientPsyche.reset();
             return;
         }
         while (OPEN_MEDICAL.consumeClick()) {
