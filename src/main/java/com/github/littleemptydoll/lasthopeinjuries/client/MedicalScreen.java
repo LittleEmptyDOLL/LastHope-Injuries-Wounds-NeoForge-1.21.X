@@ -220,10 +220,11 @@ public final class MedicalScreen extends Screen {
         Component status = wound == null ? Component.translatable("screen.lasthopeinjuries.hold_item")
                 : wound.contamination() >= 40 ? Component.translatable(wound.bandaged()
                 ? "screen.lasthopeinjuries.remove_first" : "screen.lasthopeinjuries.clean_first")
+                : wound.sutured() && wound.sutureIntegrity() < 70
+                ? Component.translatable("screen.lasthopeinjuries.damaged_suture")
                 : wound.herbSeconds() > 0 ? Component.translatable("screen.lasthopeinjuries.herbs_active",
                 (wound.herbSeconds() + 59) / 60)
-                : Component.translatable(wound.sutured() && wound.sutureIntegrity() < 70
-                ? "screen.lasthopeinjuries.damaged_suture" : wound.sutured() ? "screen.lasthopeinjuries.sutured"
+                : Component.translatable(wound.sutured() ? "screen.lasthopeinjuries.sutured"
                 : wound.stabilized() ? "screen.lasthopeinjuries.stabilized"
                 : "screen.lasthopeinjuries.active_bleeding");
         gui.drawString(font, status,
