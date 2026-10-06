@@ -67,12 +67,23 @@ public record MoodleState(int bleeding, int bloodLoss, int pain, int sickness) {
             default -> 1.0F;
         };
         float painFactor = switch (pain) {
-            case 0, 1 -> 1.0F;
+            case 0 -> 1.0F;
+            case 1 -> 0.95F;
             case 2 -> 0.9F;
             case 3 -> 0.8F;
             case 4 -> 0.7F;
             default -> 1.0F;
         };
         return bloodFactor * painFactor;
+    }
+
+    public float attackSpeedMultiplier() {
+        return switch (pain) {
+            case 1 -> 0.95F;
+            case 2 -> 0.90F;
+            case 3 -> 0.80F;
+            case 4 -> 0.70F;
+            default -> 1.0F;
+        };
     }
 }

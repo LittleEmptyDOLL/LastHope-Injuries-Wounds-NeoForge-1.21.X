@@ -30,6 +30,14 @@ public final class WoundService {
         return true;
     }
 
+    public static boolean aggravate(ServerPlayer player, BodyPart part, float healthDamage) {
+        WoundState before = get(player);
+        WoundState after = before.aggravate(part, healthDamage, player.getRandom().nextDouble());
+        if (after == before) return false;
+        set(player, after);
+        return true;
+    }
+
     public static boolean bandage(ServerPlayer player, UUID id) {
         return change(player, id, Wound::bandage, Wound::canBandage);
     }

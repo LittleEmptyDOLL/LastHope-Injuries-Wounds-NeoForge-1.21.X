@@ -24,6 +24,47 @@ public final class WoundGameTests {
     private WoundGameTests() {}
 
     @GameTest(template = "empty")
+    public static void repeatHitReopensOnlyTheAffectedHealingWound(GameTestHelper helper) {
+        Wound healing = Wound.create(BodyPart.RIGHT_ARM, WoundType.DEEP_LACERATION, 3).clean().suture();
+        for (int i = 0; i < 180; i++) healing = healing.advance(1, 1.0);
+        Wound unaffected = Wound.create(BodyPart.LEFT_ARM, WoundType.SCRATCH, 2);
+        WoundState before = new WoundState(List.of(healing, unaffected), 90);
+        WoundState missed = before.aggravate(BodyPart.LEFT_FOOT, 6, 0);
+        WoundState lucky = before.aggravate(BodyPart.RIGHT_ARM, 6, 1);
+        WoundState first = before.aggravate(BodyPart.RIGHT_ARM, 6, 0);
+        Wound damaged = first.wounds().getFirst();
+        WoundState second = first.aggravate(BodyPart.RIGHT_ARM, 6, 0);
+        Wound failed = second.wounds().getFirst();
+        JsonObject legacy = Wound.CODEC.encodeStart(JsonOps.INSTANCE, healing).getOrThrow().getAsJsonObject();
+        legacy.remove("suture_integrity");
+        Wound migrated = Wound.CODEC.parse(JsonOps.INSTANCE, legacy).getOrThrow();
+        Wound roundTrip = Wound.CODEC.parse(JsonOps.INSTANCE,
+                Wound.CODEC.encodeStart(JsonOps.INSTANCE, damaged).getOrThrow()).getOrThrow();
+        if (missed != before || lucky != before || healing.healingProgress() <= 0
+                || first.wounds().size() != 2 || !first.wounds().get(1).equals(unaffected)
+                || damaged.healingProgress() >= healing.healingProgress()
+                || damaged.bleedingPerSecond() <= healing.bleedingPerSecond()
+                || !damaged.sutured() || damaged.sutureIntegrity() >= 70 || !damaged.canSuture()
+                || failed.sutured() || failed.sutureIntegrity() != 0
+                || !roundTrip.equals(damaged) || migrated.sutureIntegrity() != 100) {
+            helper.fail("Repeat impact failed to reopen the correct wound or preserve damaged stitches");
+        } else helper.succeed();
+    }
+
+    @GameTest(template = "empty")
+    public static void painSlowsAttacksAndMorphineRelievesThePenalty(GameTestHelper helper) {
+        Wound painful = Wound.create(BodyPart.CHEST, WoundType.DEEP_LACERATION, 5);
+        MoodleState normal = MoodleState.from(new WoundState(List.of(painful), 100));
+        MoodleState suppressed = MoodleState.from(new WoundState(List.of(painful), 100), true);
+        if (normal.attackSpeedMultiplier() >= 1 || normal.attackSpeedMultiplier() < 0.7F
+                || suppressed.attackSpeedMultiplier() <= normal.attackSpeedMultiplier()
+                || normal.outgoingDamageMultiplier() >= 1
+                || MoodleState.from(WoundState.empty()).attackSpeedMultiplier() != 1) {
+            helper.fail("Pain and morphine did not change the attack penalty as expected");
+        } else helper.succeed();
+    }
+
+    @GameTest(template = "empty")
     public static void dangerAndSeriousInjuriesCauseTemporaryStress(GameTestHelper helper) {
         MoodleState healthy = MoodleState.from(WoundState.empty());
         MoodleState minor = MoodleState.from(new WoundState(List.of(

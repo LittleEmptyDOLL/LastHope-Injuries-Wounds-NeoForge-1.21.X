@@ -19,6 +19,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageType;
 import net.minecraft.world.entity.ai.attributes.AttributeModifier;
+import net.minecraft.world.entity.ai.attributes.AttributeInstance;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
@@ -34,6 +35,8 @@ public final class WoundEvents {
             Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath(LastHopeInjuries.MOD_ID, "bleeding"));
     private static final ResourceKey<DamageType> WOUND_INFECTION = ResourceKey.create(
             Registries.DAMAGE_TYPE, ResourceLocation.fromNamespaceAndPath(LastHopeInjuries.MOD_ID, "wound_infection"));
+    private static final ResourceLocation PAIN_ATTACK_SPEED = ResourceLocation.fromNamespaceAndPath(
+            LastHopeInjuries.MOD_ID, "pain_attack_speed");
     private WoundEvents() {}
 
     @SubscribeEvent
@@ -52,6 +55,7 @@ public final class WoundEvents {
         WoundGenerator.Cause cause = WoundGenerator.cause(source);
         if (cause == null) return;
         BodyPart part = lsoPart != null ? lsoPart : WoundGenerator.selectPart(cause, player.getRandom());
+        if (cause != WoundGenerator.Cause.FIRE && WoundService.aggravate(player, part, event.getNewDamage())) return;
         EquipmentSlot slot = part.armorSlot();
         ItemStack armor = player.getItemBySlot(slot);
         double[] armorPoints = {0};
@@ -72,6 +76,7 @@ public final class WoundEvents {
     public static void onTick(PlayerTickEvent.Post event) {
         if (!(event.getEntity() instanceof ServerPlayer player) || player.tickCount % 20 != 0) return;
         WoundState before = WoundService.get(player);
+        updatePainAttackSpeed(player, before);
         if (before.wounds().isEmpty() && before.bloodLevel() >= 100) return;
         int exposure = player.isInWater() ? 4
                 : player.level().isRainingAt(player.blockPosition()) ? 2 : 1;
@@ -92,6 +97,19 @@ public final class WoundEvents {
         if (player.tickCount % 200 == 0 && after.wounds().stream().anyMatch(w -> w.infection() >= 80)) {
             player.hurt(player.damageSources().source(WOUND_INFECTION), 1);
         }
+    }
+
+    private static void updatePainAttackSpeed(ServerPlayer player, WoundState state) {
+        AttributeInstance speed = player.getAttribute(Attributes.ATTACK_SPEED);
+        if (speed == null) return;
+        boolean painkiller = ModList.get().isLoaded("legendarysurvivaloverhaul")
+                && LsoRecoveryBridge.painSuppressed(player);
+        double amount = MoodleState.from(state, painkiller).attackSpeedMultiplier() - 1.0;
+        AttributeModifier current = speed.getModifier(PAIN_ATTACK_SPEED);
+        if (current != null && Math.abs(current.amount() - amount) < 0.0001) return;
+        if (current != null) speed.removeModifier(PAIN_ATTACK_SPEED);
+        if (amount < 0) speed.addTransientModifier(new AttributeModifier(
+                PAIN_ATTACK_SPEED, amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
     }
 
     @SubscribeEvent

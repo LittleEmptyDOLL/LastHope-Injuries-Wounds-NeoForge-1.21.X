@@ -47,6 +47,7 @@
   "screen.lasthopeinjuries.stabilized": "Рана стабильна",
   "screen.lasthopeinjuries.active_bleeding": "Кровотечение",
   "screen.lasthopeinjuries.sutured": "Рана зашита",
+  "screen.lasthopeinjuries.damaged_suture": "Шов повреждён",
   "screen.lasthopeinjuries.herbs_active": "Травы: %s мин",
   "part.lasthopeinjuries.head": "Голова",
   "part.lasthopeinjuries.chest": "Грудь",

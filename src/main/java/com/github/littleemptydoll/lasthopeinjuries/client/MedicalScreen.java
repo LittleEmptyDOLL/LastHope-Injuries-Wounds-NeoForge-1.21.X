@@ -222,7 +222,8 @@ public final class MedicalScreen extends Screen {
                 ? "screen.lasthopeinjuries.remove_first" : "screen.lasthopeinjuries.clean_first")
                 : wound.herbSeconds() > 0 ? Component.translatable("screen.lasthopeinjuries.herbs_active",
                 (wound.herbSeconds() + 59) / 60)
-                : Component.translatable(wound.sutured() ? "screen.lasthopeinjuries.sutured"
+                : Component.translatable(wound.sutured() && wound.sutureIntegrity() < 70
+                ? "screen.lasthopeinjuries.damaged_suture" : wound.sutured() ? "screen.lasthopeinjuries.sutured"
                 : wound.stabilized() ? "screen.lasthopeinjuries.stabilized"
                 : "screen.lasthopeinjuries.active_bleeding");
         gui.drawString(font, status,
